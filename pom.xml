@@ -82,10 +82,15 @@
 			<version>2.18.3</version>
 		</dependency>
 		<dependency>
-    <groupId>org.apache.tomcat</groupId>
-    <artifactId>tomcat-servlet-api</artifactId>
-    <version>11.0.6</version>
-</dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.tomcat</groupId>
+			<artifactId>tomcat-servlet-api</artifactId>
+			<version>11.0.6</version>
+		</dependency>
 	</dependencies>
 
 	<build>
