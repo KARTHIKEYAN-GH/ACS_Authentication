@@ -39,7 +39,7 @@ public class AcsServiceImpl implements AcsService {
 			String sessionKey = getSessionKeyFromRedis(userId); // Fetch from Redis if exists
 			System.out.println("sessionKey is " + sessionKey);
 			if (sessionKey != null) {
-				queryParams.put("sessionkey", sessionKey); // Set sessionkey from Redis
+				queryParams.put("sessionkey", sessionKey); 
 			}
 		}
 
@@ -66,7 +66,6 @@ public class AcsServiceImpl implements AcsService {
 			requestSpec = requestSpec.cookie("JSESSIONID", jsessionId);
 		}
 
-		// ⭐⭐ Print header cookie info before making the API call ⭐⭐
 		if (!"login".equalsIgnoreCase(command)) {
 			System.out.println("----- Sending Cookies in Request Header -----");
 			System.out.println("sessionkey = " + sessionKey);
@@ -128,9 +127,5 @@ public class AcsServiceImpl implements AcsService {
 		return sessionDetails != null ? sessionDetails.getSessionkey() : null;
 	}
 
-//      // Dummy placeholder method to get logged-in userId
-//         private String getLoggedInUserId() {
-//          return "---someUserId---";  // Replace with real implementation, e.g., from JWT token, or security context.
-//      }
 
 }
