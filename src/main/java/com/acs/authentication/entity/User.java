@@ -10,19 +10,22 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
 @Table(name = "users")
-@Getter
-@Setter
+@Data
 public class User {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-
+	
+	@Column(name = "user_id") //uuid
+	private String userId;
+	
 	@Column(name = "user_name")
 	private String userName;
 
@@ -44,9 +47,13 @@ public class User {
 
 	@Column(name = "domain_id")
 	private Long domainId;
-
 	
-	// Commented out until Domain entity is defined
+	@Column(name = "api_key")
+	private String apiKey;
+	
+	@Column(name = "secret_key")
+	private String secretKey;
+	
 	 @ManyToOne
 	 @JoinColumn(name = "domain_id", referencedColumnName = "Id", updatable =
 	 false, insertable = false)

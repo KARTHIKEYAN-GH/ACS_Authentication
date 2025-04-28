@@ -77,6 +77,18 @@ public class LoginController {
 					return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
 				});
 	}
+	@GetMapping("user/{command}") //e.g:logout
+	public Mono<ResponseEntity<JsonNode>> calllogout(@PathVariable String command,
+			@RequestParam Map<String, String> queryParams) {
+		return acsService.callAcsApi(HttpMethod.GET, command, queryParams, null)
+
+				.map(ResponseEntity::ok).onErrorResume(e -> {
+					e.printStackTrace();
+					return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
+				});
+	}
+	
+	
 
 	private ResponseEntity<JsonNode> error(String message) {
 		ObjectNode errorJson = objectMapper.createObjectNode();

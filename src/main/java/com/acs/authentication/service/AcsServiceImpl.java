@@ -1,6 +1,7 @@
 package com.acs.authentication.service;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -24,87 +25,101 @@ public class AcsServiceImpl implements AcsService {
 	@Autowired
 	private RedisTemplate<String, Object> redisTemplate;
 
-	private String sessionKey;
-	private String jsessionId;
-
 	@Override
 	public Mono<JsonNode> callAcsApi(HttpMethod method, String command, Map<String, String> queryParams, Object body) {
 
 		StringBuilder urlBuilder = new StringBuilder("/?command=" + command + "&response=json");
 
-		// Only check Redis for sessionKey if the command is not "login"
-		if (!"login".equalsIgnoreCase(command) && (queryParams.containsKey("userId"))) {
-			String userId = queryParams.get("userId");
+		SessionDetails sessionDetails = null;
+		String userId = null;
+
+		// Fetch session details from Redis if command is NOT login
+		if (!"login".equalsIgnoreCase(command) && queryParams.containsKey("userId")) {
+			userId = queryParams.get("userId");
 			System.out.println("userID is " + userId);
-			String sessionKey = getSessionKeyFromRedis(userId); // Fetch from Redis if exists
-			System.out.println("sessionKey is " + sessionKey);
-			if (sessionKey != null) {
-				queryParams.put("sessionkey", sessionKey); 
+			sessionDetails = getSessionDetailsFromRedis(userId);
+
+			if (sessionDetails != null && sessionDetails.getSessionkey() != null) {
+				queryParams.put("sessionkey", sessionDetails.getSessionkey());
 			}
 		}
 
+		// Build final URL
 		queryParams.forEach((key, value) -> {
-			if (!"userId".equalsIgnoreCase(key)) {
+			if (!"userId".equalsIgnoreCase(key)) { // skip userId
 				urlBuilder.append("&").append(key).append("=").append(value);
 			}
 		});
 		String finalUri = urlBuilder.toString();
 
-		WebClient.RequestHeadersSpec<?> request;
-		if (method == HttpMethod.POST || method == HttpMethod.PUT) {
-			request = (body != null) ? webClient.method(method).uri(finalUri).bodyValue(body)
-					: webClient.method(method).uri(finalUri);
-		} else {
-			request = webClient.method(method).uri(finalUri);
-		}
+		// Prepare WebClient Request
 		WebClient.RequestBodySpec requestSpec = webClient.method(method).uri(finalUri);
 
-		if (sessionKey != null) {
-			requestSpec = requestSpec.cookie("sessionkey", sessionKey);
-		}
-		if (jsessionId != null) {
-			requestSpec = requestSpec.cookie("JSESSIONID", jsessionId);
+		// Add cookies dynamically if available
+		if (sessionDetails != null) {
+			if (sessionDetails.getSessionkey() != null) {
+				requestSpec = requestSpec.cookie("sessionkey", sessionDetails.getSessionkey());
+			}
+			if (sessionDetails.getJsessionid() != null) {
+				requestSpec = requestSpec.cookie("JSESSIONID", sessionDetails.getJsessionid());
+			}
 		}
 
 		if (!"login".equalsIgnoreCase(command)) {
 			System.out.println("----- Sending Cookies in Request Header -----");
-			System.out.println("sessionkey = " + sessionKey);
-			System.out.println("JSESSIONID = " + jsessionId);
+			System.out.println("sessionkey = " + (sessionDetails != null ? sessionDetails.getSessionkey() : "null"));
+			System.out.println("JSESSIONID = " + (sessionDetails != null ? sessionDetails.getJsessionid() : "null"));
 			System.out.println("---------------------------------------------");
 		}
 
+		// Add body if required
 		if (body != null && (method == HttpMethod.POST || method == HttpMethod.PUT)) {
 			requestSpec = (RequestBodySpec) requestSpec.bodyValue(body);
 		}
 
+		userId = queryParams.get("userId");
+		if ("logout".equalsIgnoreCase(command) && userId != null) {
+			// In case of logout, remove session from Redis
+			System.out.println("Logging out user: " + userId); // Log the userId
+			// Delete session data from Redis
+			redisTemplate.opsForValue().getOperations().delete("session:" + userId);
+			System.out.println("Deleted session from Redis for user: " + userId);
+		}
+		// Execute API call
 		return requestSpec.exchangeToMono(response -> handleResponse(response, command));
 	}
 
 	private Mono<JsonNode> handleResponse(ClientResponse response, String command) {
 		return response.bodyToMono(JsonNode.class).map(body -> {
+			String userId = null; // Declare userId here to make it accessible in both blocks
+			JsonNode loginResponse = body.get("loginresponse");
+			System.out.println("handle reponse executed ");
 			if ("login".equalsIgnoreCase(command)) {
-				JsonNode loginResponse = body.get("loginresponse");
+
 				if (loginResponse != null && loginResponse.has("sessionkey")) {
-					this.sessionKey = loginResponse.get("sessionkey").asText();
-					System.out.println(" Captured sessionkey after login: " + this.sessionKey);
+					String sessionKey = loginResponse.get("sessionkey").asText();
+					System.out.println("Captured sessionkey after login: " + sessionKey);
+
+					String setCookie = response.headers().asHttpHeaders().getFirst("Set-Cookie");
+					String jsessionId = null;
+					if (setCookie != null && setCookie.contains("JSESSIONID")) {
+						jsessionId = extractJSessionId(setCookie);
+						System.out.println("Captured JSESSIONID after login: " + jsessionId);
+					}
+
+					// Save to Redis
+					SessionDetails sessionDetails = new SessionDetails();
+					sessionDetails.setSessionkey(sessionKey);
+					sessionDetails.setJsessionid(jsessionId);
+
+					userId = loginResponse.get("userid").asText();
+					// Add to cache
+					redisTemplate.opsForValue().set("session:" + userId, sessionDetails);
+					redisTemplate.expire("session:" + userId, 3600, TimeUnit.SECONDS); // one hour
+					System.out.println("Captured sessionkey & JSESSIONID for user: " + userId);
 				}
-
-				String setCookie = response.headers().asHttpHeaders().getFirst("Set-Cookie");
-				if (setCookie != null && setCookie.contains("JSESSIONID")) {
-					jsessionId = extractJSessionId(setCookie);
-					System.out.println(" Captured JSESSIONID after login: " + jsessionId);
-				}
-
-				// Save to Redis
-				SessionDetails sessionDetails = new SessionDetails();
-				sessionDetails.setSessionkey(this.sessionKey); // use 'this.sessionKey'
-				sessionDetails.setJsessionid(jsessionId);
-
-				String userId = loginResponse.get("userid").asText();
-				redisTemplate.opsForValue().set("session:" + userId, sessionDetails);
-
-				System.out.println(" Captured sessionkey & JSESSIONID for user: " + userId);
 			}
+
 			return body;
 		});
 	}
@@ -118,14 +133,8 @@ public class AcsServiceImpl implements AcsService {
 		return null;
 	}
 
-	// fetch sessionkey from Redis
-	private String getSessionKeyFromRedis(String userId) {
-		// String userId = getLoggedInUserId(); // Get the userId dynamically (could be
-		// from security context, etc.)
-		// System.out.println("user id is :"+userId);
-		SessionDetails sessionDetails = (SessionDetails) redisTemplate.opsForValue().get("session:" + userId);
-		return sessionDetails != null ? sessionDetails.getSessionkey() : null;
+	// Fetch both sessionkey and jsessionid from Redis
+	private SessionDetails getSessionDetailsFromRedis(String userId) {
+		return (SessionDetails) redisTemplate.opsForValue().get("session:" + userId);
 	}
-
-
 }
