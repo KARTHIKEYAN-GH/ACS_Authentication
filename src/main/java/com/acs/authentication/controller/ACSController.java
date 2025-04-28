@@ -67,17 +67,18 @@ public class ACSController {
 				});
 	}
 
-	@GetMapping("/{command}") // Example: /api/cloudstack/listNetworks or /getUserKeys
-	public Mono<ResponseEntity<JsonNode>> callApi(@PathVariable String command,
-			@RequestParam Map<String, String> queryParams) {
-		return acsService.callAcsApi(HttpMethod.GET, command, queryParams, null)
+//	@GetMapping("/{command}") // Example: /api/cloudstack/ listNetworks or /getUserKeys
+//	public Mono<ResponseEntity<JsonNode>> callApi(@PathVariable String command,
+//			@RequestParam Map<String, String> queryParams) {
+//		return acsService.callAcsApi(HttpMethod.GET, command, queryParams, null)
+//
+//				.map(ResponseEntity::ok).onErrorResume(e -> {
+//					e.printStackTrace();
+//					return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
+//				});
+//	}
 
-				.map(ResponseEntity::ok).onErrorResume(e -> {
-					e.printStackTrace();
-					return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
-				});
-	}
-	@GetMapping("user/{command}") //e.g:logout
+	@GetMapping("user/{command}") // e.g:logout
 	public Mono<ResponseEntity<JsonNode>> calllogout(@PathVariable String command,
 			@RequestParam Map<String, String> queryParams) {
 		return acsService.callAcsApi(HttpMethod.GET, command, queryParams, null)
@@ -87,7 +88,7 @@ public class ACSController {
 					return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
 				});
 	}
-	
+
 	@GetMapping("users/{command}") // Example: /api/cloudstack/user/getUserKeys
 	public Mono<ResponseEntity<JsonNode>> callgetUserKeys(@PathVariable String command,
 			@RequestParam Map<String, String> queryParams) {
@@ -98,8 +99,17 @@ public class ACSController {
 					return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
 				});
 	}
-	
-	
+
+	@GetMapping("/usernetworks") // Example: /api/cloudstack/user/getUserKeys
+	public Mono<ResponseEntity<JsonNode>> listNetworks(
+			@RequestParam Map<String, String> queryParams) {
+		//return acsService.callAcsApi(HttpMethod.GET, command, queryParams, null)
+		 return acsService.listNetworksByKeys(queryParams)
+				.map(ResponseEntity::ok).onErrorResume(e -> {
+					e.printStackTrace();
+					return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
+				});
+	}
 
 	private ResponseEntity<JsonNode> error(String message) {
 		ObjectNode errorJson = objectMapper.createObjectNode();

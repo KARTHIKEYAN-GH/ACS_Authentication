@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
-@ComponentScan("com.acs")
+//@ComponentScan("com.acs")
 @SpringBootApplication
 @EnableCaching
 public class AuthenticationApplication {

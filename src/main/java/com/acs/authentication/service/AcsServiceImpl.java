@@ -1,13 +1,22 @@
 package com.acs.authentication.service;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.module.FindException;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -174,7 +183,7 @@ public class AcsServiceImpl implements AcsService {
 	private SessionDetails getSessionDetailsFromRedis(String userId) {
 		return (SessionDetails) redisTemplate.opsForValue().get("session:" + userId);
 	}
-}
+
 
 //	@Override
 //	public Mono<JsonNode> listNetworksByKeys(HttpMethod post, String command, Map<String, String> queryParams,
@@ -195,27 +204,31 @@ public class AcsServiceImpl implements AcsService {
 //		}
 //		}
 //	
-//	@Override
-//	public Mono<JsonNode> listNetworksByKeys(String command, Map<String, String> queryParams, Object object) {
-//	    // Retrieve the user by userId from the queryParams
-//	    User user = userService.findByUserId(queryParams.get("userId"));
-//	    
-//	    if (user != null) {
-//	        // Create SignatureUtil instance and generate the signed URL
-//	        SignatureUtil sg = new SignatureUtil();
-//	        String finalUrl = sg.generateSignature(queryParams, user.getSecretKey());
-//
-//	        // Make the actual API call using WebClient
-//	        return WebClient.create()
-//	                .get()  // Use GET method (or POST if required by API)
-//	                .uri(finalUrl)  // Pass the signed URL as the URI
-//	                .retrieve()  // Retrieve the response
-//	                .bodyToMono(JsonNode.class)  // Convert the response to JsonNode
-//	                .onErrorMap(throwable -> new FindException("API request failed", throwable));  // Add error handling
-//	    } else {
-//	        // Throw an exception if the user is not found
-//	        return Mono.error(new IllegalArgumentException("User not found"));
-//	    }
-//	}
-//
-//}
+	@Override
+	public Mono<JsonNode> listNetworksByKeys(Map<String, String> queryParams) {
+	    User user = userService.findByUserId(queryParams.get("userId"));
+	    
+	    if (user != null) {
+	        SignatureUtil sg = new SignatureUtil();
+	        String finalUrl = sg.generateSignature(queryParams, user.getSecretKey());
+	        // 🔥 Decode the final URL before using it
+	        String decodedUrl = URLDecoder.decode(finalUrl, StandardCharsets.UTF_8);
+	        return WebClient.create()
+	            .get()
+	            .uri(URI.create(finalUrl)) // ✅ very important fix
+	            .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+	            .retrieve()
+	            .onStatus(
+	                httpStatusCode -> httpStatusCode.isError(), // Corrected here
+	                clientResponse -> clientResponse.bodyToMono(String.class)
+	                    .flatMap(errorBody -> Mono.error(new RuntimeException("API Error: " + errorBody)))
+	            )
+	            .bodyToMono(JsonNode.class);
+	    } else {
+	        return Mono.error(new IllegalArgumentException("User not found"));
+	    }
+	}
+
+
+
+}

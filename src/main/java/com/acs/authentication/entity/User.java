@@ -19,48 +19,47 @@ import lombok.Setter;
 @Data
 public class User {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-	
-	@Column(name = "user_id") //uuid
-	private String userId;
-	
-	@Column(name = "user_name")
-	private String userName;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@Column(name = "password")
-	private String password;
+    @Column(name = "user_id")
+    private String userId;
 
-	@Column(name = "email")
-	private String email;
+    @Column(name = "user_name")
+    private String userName;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "user_type")
-	private UserType userType;
+    @Column(name = "password")
+    private String password;
 
-	@Column(name = "is_active")
-	private Boolean isActive;
+    @Column(name = "email")
+    private String email;
 
-	@Column(name = "account_id")
-	private Long accountId;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_type")
+    private UserType userType;
 
-	@Column(name = "domain_id")
-	private Long domainId;
-	
-	@Column(name = "api_key")
-	private String apiKey;
-	
-	@Column(name = "secret_key")
-	private String secretKey;
-	
-	// Commented out until Domain entity is defined
-	 @ManyToOne
-	 @JoinColumn(name = "domain_id", referencedColumnName = "Id", updatable =
-	 false, insertable = false)
-	 private Domain domain;
+    @Column(name = "is_active")
+    private Boolean isActive;
 
-	public enum UserType {
-		DOMAIN_ADMIN, ROOT_ADMIN, USER;
-	}
+    @Column(name = "account_id")
+    private Long accountId;
+
+    @Column(name = "domain_id")
+    private Long domainId;
+
+    @Column(name = "api_key")
+    private String apiKey;
+
+    @Column(name = "secret_key")
+    private String secretKey;
+
+    @ManyToOne
+    @JoinColumn(name = "domain_id", referencedColumnName = "id", insertable = false, updatable = false)
+    private Domain domain;
+
+    public enum UserType {
+        DOMAIN_ADMIN, ROOT_ADMIN, USER;
+    }
 }
+

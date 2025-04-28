@@ -7,16 +7,14 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 
 @Entity
 @Table(name="domains")
-@Getter
-@Setter
+@Data
 public class Domain {
-	/** Unique ID of the domain. */
+	
 	 /** Unique ID of the domain. */
     @Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

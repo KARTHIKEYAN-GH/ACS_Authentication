@@ -8,13 +8,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
 @Table(name = "accounts")
-@Getter
-@Setter
+@Data
 public class Account {
 
 	/** Id of the account. */
@@ -28,9 +28,9 @@ public class Account {
 	private String uuid;
 
 	/** Domain of the account. */
-	@JoinColumn(name = "domain_id", referencedColumnName = "Id", updatable = false, insertable = false)
-	@ManyToOne
-	private Domain domain;
+	//@JoinColumn(name = "domain_id", referencedColumnName = "Id", updatable = false, insertable = false)
+	//@ManyToOne
+	//private Domain domain;
 
 	/** Domain id of the account. */
 	@Column(name = "domain_id")

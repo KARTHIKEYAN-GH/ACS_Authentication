@@ -12,7 +12,7 @@ public class WebClientConfig {
 	@Bean
 	public WebClient webClient() {
 		return WebClient.builder().
-				baseUrl("http://40.70.00.30:1234/client/api/?")
+				baseUrl("http://10.30.11.31:8080/client/api/?")
 				.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
 				.build();
 	}

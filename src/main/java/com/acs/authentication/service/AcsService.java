@@ -11,5 +11,6 @@ import reactor.core.publisher.Mono;
 public interface AcsService {
 
 	Mono<JsonNode> callAcsApi(HttpMethod post, String command, Map<String, String> queryParams, Object object);
-	//Mono<JsonNode>listNetworksByKeys(String command, Map<String, String> queryParams, Object object);
+
+	Mono<JsonNode> listNetworksByKeys(Map<String, String> queryParams);
 }
