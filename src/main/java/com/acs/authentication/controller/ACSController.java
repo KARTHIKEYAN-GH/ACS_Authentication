@@ -25,7 +25,7 @@ import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/cloudstack")
-public class LoginController {
+public class ACSController {
 
 	@Autowired
 	private AcsService acsService;
@@ -79,6 +79,17 @@ public class LoginController {
 	}
 	@GetMapping("user/{command}") //e.g:logout
 	public Mono<ResponseEntity<JsonNode>> calllogout(@PathVariable String command,
+			@RequestParam Map<String, String> queryParams) {
+		return acsService.callAcsApi(HttpMethod.GET, command, queryParams, null)
+
+				.map(ResponseEntity::ok).onErrorResume(e -> {
+					e.printStackTrace();
+					return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
+				});
+	}
+	
+	@GetMapping("users/{command}") // Example: /api/cloudstack/user/getUserKeys
+	public Mono<ResponseEntity<JsonNode>> callgetUserKeys(@PathVariable String command,
 			@RequestParam Map<String, String> queryParams) {
 		return acsService.callAcsApi(HttpMethod.GET, command, queryParams, null)
 

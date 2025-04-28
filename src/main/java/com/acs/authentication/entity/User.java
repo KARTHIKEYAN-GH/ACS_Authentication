@@ -54,6 +54,7 @@ public class User {
 	@Column(name = "secret_key")
 	private String secretKey;
 	
+	// Commented out until Domain entity is defined
 	 @ManyToOne
 	 @JoinColumn(name = "domain_id", referencedColumnName = "Id", updatable =
 	 false, insertable = false)
