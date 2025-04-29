@@ -12,5 +12,6 @@ public interface AcsService {
 
 	Mono<JsonNode> callAcsApi(HttpMethod post, String command, Map<String, String> queryParams, Object object);
 
-	Mono<JsonNode> listNetworksByKeys(Map<String, String> queryParams);
+	Mono<String> listNetworksByKeys(Map<String, String> queryParams);
+
 }

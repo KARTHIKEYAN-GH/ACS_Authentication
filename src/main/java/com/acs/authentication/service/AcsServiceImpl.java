@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.RequestBodySpec;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.acs.authentication.entity.User;
 import com.acs.authentication.util.SignatureUtil;
@@ -59,7 +60,6 @@ public class AcsServiceImpl implements AcsService {
 				queryParams.put("sessionkey", sessionDetails.getSessionkey());
 			}
 		}
-
 		// Build final URL
 		queryParams.forEach((key, value) -> {
 			if (!"userId".equalsIgnoreCase(key)) { // skip userId
@@ -67,7 +67,6 @@ public class AcsServiceImpl implements AcsService {
 			}
 		});
 		String finalUri = urlBuilder.toString();
-
 		// Prepare WebClient Request
 		WebClient.RequestBodySpec requestSpec = webClient.method(method).uri(finalUri);
 
@@ -80,43 +79,37 @@ public class AcsServiceImpl implements AcsService {
 				requestSpec = requestSpec.cookie("JSESSIONID", sessionDetails.getJsessionid());
 			}
 		}
-
 		if (!"login".equalsIgnoreCase(command)) {
 			System.out.println("----- Sending Cookies in Request Header -----");
 			System.out.println("sessionkey = " + (sessionDetails != null ? sessionDetails.getSessionkey() : "null"));
 			System.out.println("JSESSIONID = " + (sessionDetails != null ? sessionDetails.getJsessionid() : "null"));
 			System.out.println("---------------------------------------------");
 		}
-
 		// Add body if required
 		if (body != null && (method == HttpMethod.POST || method == HttpMethod.PUT)) {
 			requestSpec = (RequestBodySpec) requestSpec.bodyValue(body);
 		}
-
 		String uuid = queryParams.get("userId"); // userId
+
+		// In case of logout, remove session from Redis
 		if ("logout".equalsIgnoreCase(command) && uuid != null) {
-			// In case of logout, remove session from Redis
 			System.out.println("Logging out user: " + uuid); // Log the userId
-			// Delete session data from Redis
-			redisTemplate.opsForValue().getOperations().delete("session:" + uuid);
-			System.out.println("Deleted session from Redis for user: " + uuid);
+			redisTemplate.opsForValue().getOperations().delete("session:" + uuid); // Delete session data from Redis
 		}
-		// Execute API call
-		return requestSpec.exchangeToMono(response -> handleResponse(response, command, uuid));
+
+		return requestSpec.exchangeToMono(response -> handleResponse(response, command, uuid,queryParams)); // Execute API call
 	}
 
-	private Mono<JsonNode> handleResponse(ClientResponse response, String command, String userId) {
+	private Mono<JsonNode> handleResponse(ClientResponse response, String command, String userId,Map<String, String> queryParams) {
 		return response.bodyToMono(JsonNode.class).map(body -> {
-			// final String userId; // Declare userId here to make it accessible in both
-			// blocks
 			JsonNode loginResponse = body.get("loginresponse");
-			System.out.println("handle reponse executed ");
 			if ("login".equalsIgnoreCase(command)) {
 
 				if (loginResponse != null && loginResponse.has("sessionkey")) {
 					String sessionKey = loginResponse.get("sessionkey").asText();
 					System.out.println("Captured sessionkey after login: " + sessionKey);
-
+					
+					//extracts the Set-Cookie header from the HTTP response.
 					String setCookie = response.headers().asHttpHeaders().getFirst("Set-Cookie");
 					String jsessionId = null;
 					if (setCookie != null && setCookie.contains("JSESSIONID")) {
@@ -124,17 +117,28 @@ public class AcsServiceImpl implements AcsService {
 						System.out.println("Captured JSESSIONID after login: " + jsessionId);
 					}
 
-					// Save to Redis
-					SessionDetails sessionDetails = new SessionDetails();
+					SessionDetails sessionDetails = new SessionDetails(); // Save to Redis
 					sessionDetails.setSessionkey(sessionKey);
 					sessionDetails.setJsessionid(jsessionId);
 
 					String usersId = loginResponse.get("userid").asText();
-					// Add to cache
 
-					redisTemplate.opsForValue().set("session:" + usersId, sessionDetails);
+					redisTemplate.opsForValue().set("session:" + usersId, sessionDetails); // added to cache
 					redisTemplate.expire("session:" + usersId, 3600, TimeUnit.SECONDS); // one hour
 					System.out.println("Captured sessionkey & JSESSIONID for user: " + usersId);
+					
+					User existingUser = userService.findByUserId(usersId);
+					if(existingUser == null)
+					{
+						
+						User user = new User();
+						user.setUserName(loginResponse.get("username").asText());
+						user.setUserId(loginResponse.get("userid").asText());
+						user.setEmail(loginResponse.get("username").asText());
+						user.setIsActive(true);
+						userService.save(user);
+					}
+					
 				}
 			} else if ("getUserKeys".equalsIgnoreCase(command)) {
 				JsonNode getuserkeysresponse = body.get("getuserkeysresponse");
@@ -144,28 +148,15 @@ public class AcsServiceImpl implements AcsService {
 					if (userkeys != null) {
 						String apikey = userkeys.get("apikey").asText();
 						String secretkey = userkeys.get("secretkey").asText();
-
-						// Check if user already exists in the database
 						User existingUser = userService.findByUserId(userId);
 						if (existingUser != null) {
-							// Update user keys if needed
 							existingUser.setApiKey(apikey);
 							existingUser.setSecretKey(secretkey);
 							userService.save(existingUser);
-						} else {
-							// Create a new user if user doesn't exist
-							User keys = new User();
-							keys.setUserId(userId);
-							keys.setApiKey(apikey);
-							keys.setSecretKey(secretkey);
-							userService.save(keys);
-						}
-
-						System.out.println("Saved user API keys and secret key to the database.");
+						} 
 					}
 				}
 			}
-
 			return body;
 		});
 	}
@@ -184,51 +175,27 @@ public class AcsServiceImpl implements AcsService {
 		return (SessionDetails) redisTemplate.opsForValue().get("session:" + userId);
 	}
 
+	public Mono<String> listNetworksByKeys(Map<String, String> queryParams) {
+		User user = userService.findByUserId(queryParams.get("userId"));
 
-//	@Override
-//	public Mono<JsonNode> listNetworksByKeys(HttpMethod post, String command, Map<String, String> queryParams,
-//			Object object) {
-//		User user = userService.findByUserId(queryParams.get("userId"));
-//		if(user !=null)
-//		{		
-//			SignatureUtil sg=new SignatureUtil();
-//		String finalUrl = sg.generateSignedUrl(queryParams, user.getSecretKey());
-//		return (Mono<JsonNode>) WebClient.create();
-//		JsonNode response = webClient.get()
-//			    .uri(finalUrl)
-//			    .retrieve()
-//			    .bodyToMono(JsonNode.class)
-//			    .block();}
-//		else {
-//		// need to throw exception 	
-//		}
-//		}
-//	
-	@Override
-	public Mono<JsonNode> listNetworksByKeys(Map<String, String> queryParams) {
-	    User user = userService.findByUserId(queryParams.get("userId"));
-	    
-	    if (user != null) {
-	        SignatureUtil sg = new SignatureUtil();
-	        String finalUrl = sg.generateSignature(queryParams, user.getSecretKey());
-	        // 🔥 Decode the final URL before using it
-	        String decodedUrl = URLDecoder.decode(finalUrl, StandardCharsets.UTF_8);
-	        return WebClient.create()
-	            .get()
-	            .uri(URI.create(finalUrl)) // ✅ very important fix
-	            .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-	            .retrieve()
-	            .onStatus(
-	                httpStatusCode -> httpStatusCode.isError(), // Corrected here
-	                clientResponse -> clientResponse.bodyToMono(String.class)
-	                    .flatMap(errorBody -> Mono.error(new RuntimeException("API Error: " + errorBody)))
-	            )
-	            .bodyToMono(JsonNode.class);
-	    } else {
-	        return Mono.error(new IllegalArgumentException("User not found"));
-	    }
+		if (user == null) {
+			return Mono.just("User not found");
+		}
+
+		SignatureUtil sg = new SignatureUtil();
+		String finalUrl = sg.generateSignature(queryParams, user.getSecretKey());
+
+		return WebClient.create().get()
+				.uri(URI.create(finalUrl))
+				.header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+				.retrieve()
+				.onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+						clientResponse -> Mono.error(new RuntimeException("Authentication failed")))
+				.bodyToMono(String.class)
+				.onErrorResume(e -> {
+					System.out.println("Error occurred while calling ACS API: " + e.getMessage());
+					return Mono.just("Authentication failed");
+				});
 	}
-
-
 
 }
