@@ -22,5 +22,5 @@ public class LoginResponse {
     private String is2faverified;
     private String issuerfor2fa;
     private String errorMessage;
-	
+	private String jsessionid;
 }

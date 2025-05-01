@@ -11,13 +11,16 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.acs.authentication.service.AcsService;
 import com.acs.authentication.util.JwtUtil;
+import com.acs.web.dto.CreateNetworkDTO;
 import com.acs.web.dto.LoginRequest;
+import com.acs.web.dto.LoginResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -38,53 +41,37 @@ public class ACSController {
 	public ResponseEntity<String> test() {
 		return ResponseEntity.ok("Test successful!");
 	}
+    @PostMapping("/{command}") // e.g., /api/cloudstack/login
+    public Mono<ResponseEntity<JsonNode>> callAcsApi(@PathVariable String command,
+                                                     @RequestBody LoginRequest loginRequest) {
+        String username = loginRequest.getUsername();
+        String password = loginRequest.getPassword();
+        String domain = loginRequest.getDomain();
 
+        // Validation
+        if (username == null || username.isEmpty()) {
+            return Mono.just(error("Username is required."));
+        }
 
-	@PostMapping("/{command}") // Example: /api/cloudstack/login
-	public Mono<ResponseEntity<? extends JsonNode>> callAcsApi(@PathVariable String command,
-	                                                 @RequestBody LoginRequest loginRequest) {
+        if (!username.equalsIgnoreCase("admin") && (domain == null || domain.isEmpty())) {
+            return Mono.just(error("Domain is required for non-admin users."));
+        }
 
-	    String username = loginRequest.getUsername();
-	    String password = loginRequest.getPassword();
-	    String domain = loginRequest.getDomain();
+        Map<String, String> queryParams = new HashMap<>();
+        queryParams.put("username", username);
+        queryParams.put("password", password);
+        if (!username.equalsIgnoreCase("admin")) {
+            queryParams.put("domain", domain);
+        }
 
-	    if (username == null || username.isEmpty()) {
-	        return Mono.just(error("Username is required."));
-	    }
-
-	    if (!username.equalsIgnoreCase("admin") && (domain == null || domain.isEmpty())) {
-	        return Mono.just(error("Domain is required for non-admin users."));
-	    }
-
-	    Map<String, String> queryParams = new HashMap<>();
-	    queryParams.put("username", username);
-	    queryParams.put("password", password);
-	    if (!username.equalsIgnoreCase("admin")) {
-	        queryParams.put("domain", domain);
-	    }
-
-	    return acsService.callAcsApi(HttpMethod.POST, command, queryParams, loginRequest)
-	            .map(json -> {
-	                JsonNode userIdNode = json.at("/loginresponse/userid");
-	                if (userIdNode.isMissingNode()) {
-	                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(json);
-	                }
-
-	                String userId = userIdNode.asText();
-	                String token = JwtUtil.generateToken(username, userId);
-
-	                ObjectNode responseWithJwt = objectMapper.createObjectNode();
-	                responseWithJwt.set("acsResponse", json);
-	                responseWithJwt.put("jwtToken", token);
-
-	                return ResponseEntity.ok(responseWithJwt);
-	            })
-	            .onErrorResume(e -> {
-	                e.printStackTrace();
-	                return Mono.just(serverError("Internal Server Error: " + e.getMessage()));
-	            });
-	}
-
+        // Make the call
+        return acsService.callAcsApi(HttpMethod.POST, command, queryParams, loginRequest)
+                .map(ResponseEntity::ok)
+                .onErrorResume(e -> {
+                    e.printStackTrace(); // optional for debugging
+                    return Mono.just(serverError("Internal Server Error: " + e.getMessage()));
+                });
+    }
 
 //	@GetMapping("/{command}") // Example: /api/cloudstack/ listNetworks or /getUserKeys 
 //	public Mono<ResponseEntity<JsonNode>> callApi(@PathVariable String command,
@@ -101,7 +88,6 @@ public class ACSController {
 	public Mono<ResponseEntity<JsonNode>> calllogout(@PathVariable String command,
 			@RequestParam Map<String, String> queryParams) {
 		return acsService.callAcsApi(HttpMethod.GET, command, queryParams, null)
-
 				.map(ResponseEntity::ok).onErrorResume(e -> {
 					e.printStackTrace();
 					return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
@@ -119,12 +105,13 @@ public class ACSController {
 				});
 	}
 
-	@GetMapping("/listNetworks")
-	public Mono<ResponseEntity<String>> listNetworks(@RequestParam Map<String, String> queryParams) {
-	    return acsService.listNetworksByKeys(queryParams)
-	            .map(ResponseEntity::ok)
-	            .onErrorResume(e -> Mono.just(ResponseEntity.status(500).body("Internal Error")));
-	}
+//	@GetMapping("/listNetworks")
+//	public Mono<ResponseEntity<String>> listNetworks(@RequestParam Map<String, String> queryParams) {
+//	    return acsService.listNetworksByKeys(queryParams)
+//	            .map(ResponseEntity::ok)
+//	            .onErrorResume(e -> Mono.just(ResponseEntity.status(500).body("Internal Error")));
+//	}
+	
 
 	private ResponseEntity<JsonNode> error(String message) {
 		ObjectNode errorJson = objectMapper.createObjectNode();
