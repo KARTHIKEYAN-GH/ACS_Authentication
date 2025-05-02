@@ -7,168 +7,164 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.RequestBodySpec;
 
 import com.acs.authentication.entity.User;
+import com.acs.authentication.handler.GenericRequestHandler;
 import com.acs.authentication.service.AcsService;
 import com.acs.authentication.service.UserService;
 import com.acs.web.dto.CreateNetworkDTO;
 import com.acs.web.dto.CreateNetworkRequest;
+import com.acs.web.dto.CreateVolumeDTO;
+import com.acs.web.dto.DeleteNetworkDTO;
+import com.acs.web.dto.GetUserKeysDTO;
+import com.acs.web.dto.ListNetworksDTO;
 import com.acs.web.dto.LoginRequest;
 import com.acs.web.dto.LoginResponse;
 import com.acs.web.dto.SessionDetails;
+import com.acs.web.dto.UpdateNetworkDTO;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import reactor.core.publisher.Mono;
 
 @Service
 public class AcsServiceImpl implements AcsService {
-	
-	@Autowired
-	private WebClient webClient;
 
 	@Autowired
-	private UserService userService;
+	private GenericRequestHandler requestHandler;
 
-	@Autowired
-	private RedisTemplate<String, Object> redisTemplate;
+	public Mono<ResponseEntity<JsonNode>> login(LoginRequest loginRequest) {
+		String command = "login";
+		Map<String, String> queryParams = new HashMap<>();
+		queryParams.put("username", loginRequest.getUsername());
+		queryParams.put("password", loginRequest.getPassword());
+
+		if (!loginRequest.getUsername().equalsIgnoreCase("admin")) {
+			if (loginRequest.getDomain() == null || loginRequest.getDomain().isEmpty()) {
+				return Mono.just(requestHandler.error("Enter Domain: e.g. \\\"domain\\\": \\\"sample@gmail.com\\\""));
+			}
+			queryParams.put("domain", loginRequest.getDomain());
+		}
+
+		return requestHandler.handleRequest(HttpMethod.POST, command, queryParams, loginRequest);
+	}
 
 	@Override
-	public Mono<JsonNode> callAcsApi(HttpMethod method, String command, Map<String, String> queryParams, Object body) {
+	public Mono<ResponseEntity<JsonNode>> getUserKeys(GetUserKeysDTO getUserKeysDTO) {
+		Map<String, String> queryParams = new HashMap<>();
+		queryParams.put("userId", getUserKeysDTO.getUserId());
+		queryParams.put("domainId", getUserKeysDTO.getDomainId());
+		queryParams.put("id", getUserKeysDTO.getId());
+		return requestHandler.handleRequest(HttpMethod.GET, "getUserKeys", queryParams, null);
 
-		StringBuilder urlBuilder = new StringBuilder("/?command=" + command + "&response=json");
-
-		SessionDetails sessionDetails = null;
-		final String userId;
-
-		// Fetch session details from Redis if command is NOT login
-		if (!"login".equalsIgnoreCase(command) && queryParams.containsKey("userId")) {
-			userId = queryParams.get("userId");
-			System.out.println("userID is " + userId);
-			sessionDetails = getSessionDetailsFromRedis(userId);
-
-			if (sessionDetails != null && sessionDetails.getSessionkey() != null) {
-				queryParams.put("sessionkey", sessionDetails.getSessionkey());
-			}
-		}
-		// Build final URL
-		queryParams.forEach((key, value) -> {
-			if (!"userId".equalsIgnoreCase(key)) { // skip userId
-				urlBuilder.append("&").append(key).append("=").append(value);
-			}
-		});
-		String finalUri = urlBuilder.toString();
-		// Prepare WebClient Request
-		WebClient.RequestBodySpec requestSpec = webClient.method(method).uri(finalUri);
-
-		// Add cookies dynamically if available
-		if (sessionDetails != null) {
-			if (sessionDetails.getSessionkey() != null) {
-				requestSpec = requestSpec.cookie("sessionkey", sessionDetails.getSessionkey());
-			}
-			if (sessionDetails.getJsessionid() != null) {
-				requestSpec = requestSpec.cookie("JSESSIONID", sessionDetails.getJsessionid());
-			}
-		}
-		if (!"login".equalsIgnoreCase(command)) {
-			System.out.println("----- Sending Cookies in Request Header -----");
-			System.out.println("sessionkey = " + (sessionDetails != null ? sessionDetails.getSessionkey() : "null"));
-			System.out.println("JSESSIONID = " + (sessionDetails != null ? sessionDetails.getJsessionid() : "null"));
-			System.out.println("---------------------------------------------");
-		}
-		// Add body if required
-		if (body != null && (method == HttpMethod.POST || method == HttpMethod.PUT)) {
-			requestSpec = (RequestBodySpec) requestSpec.bodyValue(body);
-		}
-		String uuid = queryParams.get("userId"); // userId
-
-		// In case of logout, remove session from Redis
-		if ("logout".equalsIgnoreCase(command) && uuid != null) {
-			System.out.println("Logging out user: " + uuid); // Log the userId
-			redisTemplate.opsForValue().getOperations().delete("session:" + uuid); // Delete session data from Redis
-		}
-
-		return requestSpec.exchangeToMono(response -> handleResponse(response, command, uuid,queryParams)); // Execute API call
 	}
 
-	private Mono<JsonNode> handleResponse(ClientResponse response, String command, String userId,Map<String, String> queryParams) {
-		return response.bodyToMono(JsonNode.class).map(body -> {
-			JsonNode loginResponse = body.get("loginresponse");
-			if ("login".equalsIgnoreCase(command)) {
-
-				if (loginResponse != null && loginResponse.has("sessionkey")) {
-					String sessionKey = loginResponse.get("sessionkey").asText();
-					System.out.println("Captured sessionkey after login: " + sessionKey);
-					
-					//extracts the Set-Cookie header from the HTTP response.
-					String setCookie = response.headers().asHttpHeaders().getFirst("Set-Cookie");
-					String jsessionId = null;
-					if (setCookie != null && setCookie.contains("JSESSIONID")) {
-						jsessionId = extractJSessionId(setCookie);
-						System.out.println("Captured JSESSIONID after login: " + jsessionId);
-					}
-
-					SessionDetails sessionDetails = new SessionDetails(); // Save to Redis
-					sessionDetails.setSessionkey(sessionKey);
-					sessionDetails.setJsessionid(jsessionId);
-
-					String usersId = loginResponse.get("userid").asText();
-
-					redisTemplate.opsForValue().set("session:" + usersId, sessionDetails); // added to cache
-					redisTemplate.expire("session:" + usersId, 3600, TimeUnit.SECONDS); // one hour
-					System.out.println("Captured sessionkey & JSESSIONID for user: " + usersId);
-					
-					User existingUser = userService.findByUserId(usersId);
-					if(existingUser == null)
-					{
-						
-						User user = new User();
-						user.setUserName(loginResponse.get("username").asText());
-						user.setUserId(loginResponse.get("userid").asText());
-						user.setEmail(loginResponse.get("username").asText());
-						user.setIsActive(true);
-						userService.save(user);
-					}
-					
-				}
-			} else if ("getUserKeys".equalsIgnoreCase(command)) {
-				JsonNode getuserkeysresponse = body.get("getuserkeysresponse");
-
-				if (getuserkeysresponse != null) {
-					JsonNode userkeys = getuserkeysresponse.get("userkeys");
-					if (userkeys != null) {
-						String apikey = userkeys.get("apikey").asText();
-						String secretkey = userkeys.get("secretkey").asText();
-						User existingUser = userService.findByUserId(userId);
-						if((existingUser.getApiKey() ==null) && (existingUser.getSecretKey() ==null)) {
-							existingUser.setApiKey(apikey);
-							existingUser.setSecretKey(secretkey);
-							userService.save(existingUser);
-						} 
-					}
-				}
-			}
-			return body;
-		});
+	@Override
+	public Mono<ResponseEntity<JsonNode>> listNetworks(ListNetworksDTO listNetworksDTO) {
+		Map<String, String> queryParams = new HashMap<>();
+		queryParams.put("userId", listNetworksDTO.getUserId());
+		queryParams.put("domainId", listNetworksDTO.getDomainId());
+		return requestHandler.handleRequest(HttpMethod.GET, "listNetworks", queryParams, null);
 	}
 
-	private String extractJSessionId(String setCookie) {
-		for (String cookie : setCookie.split(";")) {
-			if (cookie.trim().startsWith("JSESSIONID")) {
-				return cookie.split("=")[1];
-			}
+	@Override
+	public Mono<ResponseEntity<JsonNode>> logout(String userId) {
+		Map<String, String> queryParams = new HashMap<>();
+		queryParams.put("userId", userId);
+		return requestHandler.handleRequest(HttpMethod.GET, "logout", queryParams, null);
+	}
+
+	@Override
+	public Mono<ResponseEntity<JsonNode>> createNetwork(CreateNetworkDTO createNetworkDTO) {
+		Map<String, String> queryParams = new HashMap();
+		queryParams.put("userId", createNetworkDTO.getUserId());
+		queryParams.put("domainid", createNetworkDTO.getDomainid());
+		queryParams.put("name", createNetworkDTO.getName());
+		queryParams.put("zoneId", createNetworkDTO.getZoneId());
+		queryParams.put("networkOfferingId", createNetworkDTO.getNetworkOfferingId());
+		return requestHandler.handleRequest(HttpMethod.GET, "createNetwork", queryParams, null);
+	}
+
+	@Override
+	public Mono<ResponseEntity<JsonNode>> deleteNetwork(DeleteNetworkDTO deleteNetworkDTO) {
+		Map<String, String> queryParams = new HashMap();
+		queryParams.put("id", deleteNetworkDTO.getId());
+		queryParams.put("forced", String.valueOf(deleteNetworkDTO.isForced()));
+		queryParams.put("userId", deleteNetworkDTO.getUserId());
+		return requestHandler.handleRequest(HttpMethod.GET, "deleteNetwork", queryParams, null);
+	}
+
+	@Override
+	public Mono<ResponseEntity<JsonNode>> queryAsyncJobResult(Map<String, String> param) {
+		Map<String, String> queryParams = new HashMap();
+		queryParams.put("jobid", param.get("jobid"));
+		queryParams.put("userId", param.get("userId"));
+		return requestHandler.handleRequest(HttpMethod.GET, "queryAsyncJobResult", queryParams, null);
+	}
+
+	@Override
+	public Mono<ResponseEntity<JsonNode>> createVolume(CreateVolumeDTO request) {
+		Map<String, String> queryParams = new HashMap();
+		queryParams.put("name", request.getName());
+		queryParams.put("diskofferingid", request.getDiskofferingid());
+		queryParams.put("zoneid", request.getZoneid());
+		queryParams.put("userId", request.getUserId());
+		return requestHandler.handleRequest(HttpMethod.GET, "createVolume", queryParams, null);
+	}
+
+	@Override
+	public Mono<ResponseEntity<JsonNode>> deleteVolume(Map<String, String> Params) {
+		Map<String, String> queryParams = new HashMap();
+		queryParams.put("id", Params.get("id"));
+		queryParams.put("userId", Params.get("userId"));
+		return requestHandler.handleRequest(HttpMethod.GET, "deleteVolume", queryParams, null);
+
+	}
+
+	@Override
+	public Mono<ResponseEntity<JsonNode>> destroyVolume(Map<String, String> Params) {
+		Map<String, String> queryParams = new HashMap();
+		queryParams.put("id", Params.get("id"));
+		if(Params.get("expunge")!=null)
+		{
+		queryParams.put("expunge", Params.get("expunge"));
 		}
-		return null;
+		if(!queryParams.isEmpty())
+		{
+			return requestHandler.handleRequest(HttpMethod.GET, "destroyVolume", queryParams, null);
+		}
+		return Mono.just(requestHandler.error("Missing required parameter: id"));
 	}
 
-	// Fetch both sessionkey and jsessionid from Redis
-	private SessionDetails getSessionDetailsFromRedis(String userId) {
-		return (SessionDetails) redisTemplate.opsForValue().get("session:" + userId);
+	@Override
+	public Mono<ResponseEntity<JsonNode>> updateNetwork(UpdateNetworkDTO updateNetworkDTO) {
+		Map<String, String> queryParams = new HashMap();
+		queryParams.put("userId", updateNetworkDTO.getUserId());
+		queryParams.put("id", updateNetworkDTO.getId());
+		
+		if (updateNetworkDTO.getName() != null)
+			queryParams.put("name", updateNetworkDTO.getName());			
+
+		if (updateNetworkDTO.getSourcenatipaddress() != null)
+			queryParams.put("sourcenatipaddress", updateNetworkDTO.getSourcenatipaddress());
+
+		if (updateNetworkDTO.getNetworkofferingid() != null)
+			queryParams.put("networkofferingid", updateNetworkDTO.getNetworkofferingid());
+
+		if (updateNetworkDTO.getDns2() != null)
+			queryParams.put("dns2", updateNetworkDTO.getDns2());
+		
+
+		return requestHandler.handleRequest(HttpMethod.GET, "updateNetwork", queryParams, null);
+
 	}
 
-	
 }

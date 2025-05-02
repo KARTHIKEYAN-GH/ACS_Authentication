@@ -47,7 +47,10 @@ public class User {
 
     @Column(name = "domain_id")
     private Long domainId;
-
+    
+    @Column(name = "domain_uuid")
+    private String domainUuid;
+    
     @Column(name = "api_key")
     private String apiKey;
 
@@ -59,7 +62,7 @@ public class User {
     private Domain domain;
 
     public enum UserType {
-        DOMAIN_ADMIN, ROOT_ADMIN, USER;
+        DOMAIN_ADMIN, ROOT_ADMIN, USER,READ_ONLY_ADMIN;
     }
 }
 

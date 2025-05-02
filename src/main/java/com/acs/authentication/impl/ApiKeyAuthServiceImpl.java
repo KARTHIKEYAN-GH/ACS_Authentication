@@ -33,39 +33,7 @@ public class ApiKeyAuthServiceImpl implements ApiKeyAuthService{
 	@Autowired
 	private SignatureUtil signatureUtil;
 
-//	@Override
-//	public Mono<JsonNode> callAcsViaKeys(HttpMethod method, Map<String, String> queryParams, Object body) {
-//		String userId=queryParams.get("userId");
-//		if(userId != null)
-//		{
-//			User user=userService.findByUserId(userId);
-//			if (user!=null)
-//			{
-//				String finalUrl=signatureUtil.generateSignature(queryParams,user.getSecretKey());
-//				
-//		        WebClient.RequestHeadersSpec<?> request;
-//		        
-//		        if (method == HttpMethod.POST || method == HttpMethod.PUT) {
-//		            request = body != null ? webClient.method(method).uri(URI.create(finalUrl)).bodyValue(body)
-//		                    : webClient.method(method).uri(URI.create(finalUrl));
-//		        } else {
-//		            request = webClient.method(method).uri(URI.create(finalUrl));
-//		        }
-//		        return request
-//		            .retrieve()
-//		            .onStatus(HttpStatusCode::isError, response ->
-//		                response.bodyToMono(String.class)
-//		                    .flatMap(errorBody -> {
-//		                        return Mono.error(new ACSException("ACS Error: " + errorBody));
-//		                    })
-//		            )
-//		            .bodyToMono(JsonNode.class);
-//		    }
-//			return Mono.error(new IllegalArgumentException("no user found"));	
-//			}
-//		
-//		return Mono.error(new IllegalArgumentException("userId is null"));
-////	}
+
 	@Override
 	public Mono<String> callAcsViaKeys(HttpMethod method, Map<String, String> queryParams, Object body) {
 	

@@ -1,29 +1,31 @@
 package com.acs.authentication.controller;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.acs.authentication.service.AcsService;
-import com.acs.authentication.util.JwtUtil;
 import com.acs.web.dto.CreateNetworkDTO;
+import com.acs.web.dto.CreateVolumeDTO;
+import com.acs.web.dto.CreateVolumeRequest;
+import com.acs.web.dto.DeleteNetworkDTO;
+import com.acs.web.dto.DeleteVolumeRequest;
+import com.acs.web.dto.DestroyVolumeRequest;
+import com.acs.web.dto.GetUserKeysDTO;
+import com.acs.web.dto.ListNetworksDTO;
 import com.acs.web.dto.LoginRequest;
-import com.acs.web.dto.LoginResponse;
+import com.acs.web.dto.QueryAsyncJobResult;
+import com.acs.web.dto.UpdateNetworkDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import reactor.core.publisher.Mono;
 
@@ -34,95 +36,64 @@ public class ACSController {
 	@Autowired
 	private AcsService acsService;
 
-	@Autowired
-	private ObjectMapper objectMapper;
-
 	@GetMapping("/test")
 	public ResponseEntity<String> test() {
 		return ResponseEntity.ok("Test successful!");
 	}
-    @PostMapping("/{command}") // e.g., /api/cloudstack/login
-    public Mono<ResponseEntity<JsonNode>> callAcsApi(@PathVariable String command,
-                                                     @RequestBody LoginRequest loginRequest) {
-        String username = loginRequest.getUsername();
-        String password = loginRequest.getPassword();
-        String domain = loginRequest.getDomain();
 
-        // Validation
-        if (username == null || username.isEmpty()) {
-            return Mono.just(error("Username is required."));
-        }
+	@PostMapping("/login")
+	public Mono<ResponseEntity<JsonNode>> login(@RequestBody LoginRequest loginRequest) {
+		return acsService.login(loginRequest);
+	}
 
-        if (!username.equalsIgnoreCase("admin") && (domain == null || domain.isEmpty())) {
-            return Mono.just(error("Domain is required for non-admin users."));
-        }
+	@GetMapping("/logout")
+	public Mono<ResponseEntity<JsonNode>> logout(@RequestParam Map<String, String> queryParams) {
+		return acsService.logout(queryParams.get("userId"));
+	}
 
-        Map<String, String> queryParams = new HashMap<>();
-        queryParams.put("username", username);
-        queryParams.put("password", password);
-        if (!username.equalsIgnoreCase("admin")) {
-            queryParams.put("domain", domain);
-        }
+	@GetMapping("/getUserKeys")
+	public Mono<ResponseEntity<JsonNode>> getUserKeys(@RequestBody GetUserKeysDTO getUserKeysDTO) {
+		return acsService.getUserKeys(getUserKeysDTO);
+	}
 
-        // Make the call
-        return acsService.callAcsApi(HttpMethod.POST, command, queryParams, loginRequest)
-                .map(ResponseEntity::ok)
-                .onErrorResume(e -> {
-                    e.printStackTrace(); // optional for debugging
-                    return Mono.just(serverError("Internal Server Error: " + e.getMessage()));
-                });
+	@GetMapping("/listNetworks")
+	public Mono<ResponseEntity<JsonNode>> listNetworks(@RequestBody ListNetworksDTO listNetworksDTO) {
+		return acsService.listNetworks(listNetworksDTO);
+	}
+
+	@GetMapping("/createNetwork")
+	public Mono<ResponseEntity<JsonNode>> createNetwork(@RequestBody CreateNetworkDTO createNetworkDTO) {
+		return acsService.createNetwork(createNetworkDTO);
+	}
+	
+	@GetMapping("/updateNetwork")
+	public Mono<ResponseEntity<JsonNode>> updateNetwork(@RequestBody UpdateNetworkDTO updateNetworkDTO) {
+		return acsService.updateNetwork(updateNetworkDTO);
+	}
+	
+	@GetMapping("/deleteNetwork")
+	public Mono<ResponseEntity<JsonNode>> deleteNetwork(@RequestBody DeleteNetworkDTO deleteNetworkDTO) {
+		return acsService.deleteNetwork(deleteNetworkDTO);
+	}
+
+	@GetMapping("/createVolume")
+    public Mono<ResponseEntity<JsonNode>> createVolume(@RequestBody CreateVolumeDTO request) {
+        return acsService.createVolume(request);
     }
 
-//	@GetMapping("/{command}") // Example: /api/cloudstack/ listNetworks or /getUserKeys 
-//	public Mono<ResponseEntity<JsonNode>> callApi(@PathVariable String command,
-//			@RequestParam Map<String, String> queryParams) {
-//		return acsService.callAcsApi(HttpMethod.GET, command, queryParams, null)
-//
-//				.map(ResponseEntity::ok).onErrorResume(e -> {
-//					e.printStackTrace();
-//					return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
-//				});
-//	}
-
-	@GetMapping("user/{command}") // Example:logout
-	public Mono<ResponseEntity<JsonNode>> calllogout(@PathVariable String command,
-			@RequestParam Map<String, String> queryParams) {
-		return acsService.callAcsApi(HttpMethod.GET, command, queryParams, null)
-				.map(ResponseEntity::ok).onErrorResume(e -> {
-					e.printStackTrace();
-					return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
-				});
+    @GetMapping("/deleteVolume")
+    public Mono<ResponseEntity<JsonNode>> deleteVolume(@RequestParam Map<String, String> queryParams) {
+        return acsService.deleteVolume(queryParams);
+   }
+    
+    @PostMapping("/destroyVolume")
+    public Mono<ResponseEntity<JsonNode>> destroyVolume(@RequestParam Map<String, String> queryParams) {
+		return  acsService.destroyVolume(queryParams);
 	}
 
-	@GetMapping("users/{command}") // Example: /api/cloudstack/user/getUserKeys  param "userId"
-	public Mono<ResponseEntity<JsonNode>> callgetUserKeys(@PathVariable String command,
-			@RequestParam Map<String, String> queryParams) {
-		return acsService.callAcsApi(HttpMethod.GET, command, queryParams, null)
-
-				.map(ResponseEntity::ok).onErrorResume(e -> {
-					e.printStackTrace();
-					return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
-				});
-	}
-
-//	@GetMapping("/listNetworks")
-//	public Mono<ResponseEntity<String>> listNetworks(@RequestParam Map<String, String> queryParams) {
-//	    return acsService.listNetworksByKeys(queryParams)
-//	            .map(ResponseEntity::ok)
-//	            .onErrorResume(e -> Mono.just(ResponseEntity.status(500).body("Internal Error")));
-//	}
-	
-
-	private ResponseEntity<JsonNode> error(String message) {
-		ObjectNode errorJson = objectMapper.createObjectNode();
-		errorJson.put("error", message);
-		return ResponseEntity.badRequest().body(errorJson);
-	}
-
-	private ResponseEntity<JsonNode> serverError(String message) {
-		ObjectNode errorJson = objectMapper.createObjectNode();
-		errorJson.put("error", message);
-		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorJson);
+	@GetMapping("/queryAsyncJobResult") //jobid ,userId
+	public Mono<ResponseEntity<JsonNode>> deleteNetwork(@RequestParam Map<String, String> param) {
+		return acsService.queryAsyncJobResult(param);
 	}
 
 }
