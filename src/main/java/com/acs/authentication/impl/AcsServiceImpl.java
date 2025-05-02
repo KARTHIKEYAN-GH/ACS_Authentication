@@ -58,12 +58,12 @@ public class AcsServiceImpl implements AcsService {
 	}
 
 	@Override
-	public Mono<ResponseEntity<JsonNode>> getUserKeys(GetUserKeysDTO getUserKeysDTO) {
+	public Mono<ResponseEntity<JsonNode>> getUserKeys(GetUserKeysDTO getUserKeysDTO,String jwt) {
 		Map<String, String> queryParams = new HashMap<>();
 		queryParams.put("userId", getUserKeysDTO.getUserId());
 		queryParams.put("domainId", getUserKeysDTO.getDomainId());
 		queryParams.put("id", getUserKeysDTO.getId());
-		return requestHandler.handleRequest(HttpMethod.GET, "getUserKeys", queryParams, null);
+		return requestHandler.handleRequest(HttpMethod.GET, "getUserKeys", queryParams, jwt);
 
 	}
 

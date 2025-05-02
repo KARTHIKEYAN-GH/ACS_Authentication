@@ -19,7 +19,7 @@ public interface AcsService {
 	
 	Mono<ResponseEntity<JsonNode>> login(LoginRequest loginRequest);
 	Mono<ResponseEntity<JsonNode>> logout(String userId );
-	Mono<ResponseEntity<JsonNode>> getUserKeys(GetUserKeysDTO getUserKeysDTO);
+	//Mono<ResponseEntity<JsonNode>> getUserKeys(GetUserKeysDTO getUserKeysDTO);
 	Mono<ResponseEntity<JsonNode>> listNetworks(ListNetworksDTO listNetworksDTO);
 	Mono<ResponseEntity<JsonNode>> createNetwork(CreateNetworkDTO createNetworkDTO);
 	Mono<ResponseEntity<JsonNode>> deleteNetwork(DeleteNetworkDTO deleteNetworkDTO);
@@ -28,6 +28,7 @@ public interface AcsService {
 	Mono<ResponseEntity<JsonNode>> deleteVolume(Map<String, String> queryParams);
 	Mono<ResponseEntity<JsonNode>> destroyVolume(Map<String, String> queryParams);
 	Mono<ResponseEntity<JsonNode>> updateNetwork(UpdateNetworkDTO updateNetworkDTO);
+	Mono<ResponseEntity<JsonNode>> getUserKeys(GetUserKeysDTO getUserKeysDTO, String jwt);
 	
 	
 }

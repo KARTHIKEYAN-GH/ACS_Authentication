@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -51,9 +52,19 @@ public class ACSController {
 		return acsService.logout(queryParams.get("userId"));
 	}
 
-	@GetMapping("/getUserKeys")
-	public Mono<ResponseEntity<JsonNode>> getUserKeys(@RequestBody GetUserKeysDTO getUserKeysDTO) {
-		return acsService.getUserKeys(getUserKeysDTO);
+	//@GetMapping("/getUserKeys")
+	//public Mono<ResponseEntity<JsonNode>> getUserKeys(@RequestBody GetUserKeysDTO getUserKeysDTO) {
+	//	return acsService.getUserKeys(getUserKeysDTO);
+	//}
+	@PostMapping("/getUserKeys")
+	public Mono<ResponseEntity<JsonNode>> getUserKeys(
+	        @RequestHeader("Authorization") String authorizationHeader,
+	        @RequestBody GetUserKeysDTO getUserKeysDTO) {
+
+	    // You can optionally extract the token:
+	    String jwt = authorizationHeader.replace("Bearer ", "");
+
+	    return acsService.getUserKeys(getUserKeysDTO,jwt);
 	}
 
 	@GetMapping("/listNetworks")

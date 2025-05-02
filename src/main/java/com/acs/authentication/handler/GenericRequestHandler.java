@@ -16,6 +16,7 @@ import org.springframework.web.reactive.function.client.WebClient.RequestBodySpe
 import com.acs.authentication.entity.User;
 import com.acs.authentication.service.ApiKeyAuthService;
 import com.acs.authentication.service.UserService;
+import com.acs.authentication.util.JwtUtil;
 import com.acs.web.dto.SessionDetails;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,7 +31,10 @@ public class GenericRequestHandler {
 
 	@Autowired
 	private ObjectMapper objectMapper;
-
+	
+	@Autowired
+	private JwtUtil jwtUtil;
+	
 	@Autowired
 	private WebClient webClient;
 
@@ -74,7 +78,9 @@ public class GenericRequestHandler {
 		if (!"login".equalsIgnoreCase(command) && queryParams.containsKey("userId")) {
 			userId = queryParams.get("userId");
 			System.out.println("userID is " + userId);
-			sessionDetails = getSessionDetailsFromRedis(userId);
+			String session=jwtUtil.extractSessionKey(body.toString());
+			System.out.println("Sessionkey is :"+session);
+			sessionDetails = getSessionDetailsFromRedis(session);
 
 			if (sessionDetails != null && sessionDetails.getSessionkey() != null) {
 				queryParams.put("sessionkey", sessionDetails.getSessionkey());
@@ -147,8 +153,12 @@ public class GenericRequestHandler {
 
 					String usersId = loginResponse.get("userid").asText();
 
-					redisTemplate.opsForValue().set("session:" + usersId, sessionDetails); // added to cache
+					redisTemplate.opsForValue().set("session:" + sessionKey, sessionDetails); // added to cache
 					redisTemplate.expire("session:" + usersId, 3600, TimeUnit.SECONDS); // one hour
+
+					String jwtToken = jwtUtil.generateToken(loginResponse.get("username").asText(), userId, sessionKey);
+					 ObjectNode responseWithToken = (ObjectNode) loginResponse;
+					   responseWithToken.put("token", jwtToken);
 					System.out.println("Captured sessionkey & JSESSIONID for user: " + usersId);
 
 					User existingUser = userService.findByUserId(usersId);
@@ -161,7 +171,7 @@ public class GenericRequestHandler {
 						user.setIsActive(true);
 						// the account type (admin, domain-admin, read-only-admin, user)
 						String userType = loginResponse.get("type").asText();
-						
+
 						if (userType.equalsIgnoreCase("1")) {
 							user.setUserType(user.getUserType().ROOT_ADMIN);
 						} else if (userType.equalsIgnoreCase("2")) {
