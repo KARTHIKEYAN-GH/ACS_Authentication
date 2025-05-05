@@ -1,4 +1,4 @@
-package com.acs.authentication;
+package com.acs.authentication.configuration;
 
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;

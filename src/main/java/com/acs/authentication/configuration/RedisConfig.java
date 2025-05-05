@@ -1,4 +1,4 @@
-package com.acs.authentication;
+package com.acs.authentication.configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,15 +17,9 @@ public class RedisConfig {
 	public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
 		RedisTemplate<String, Object> template = new RedisTemplate<>();
 		template.setConnectionFactory(redisConnectionFactory);
-
-		// Create a Jackson2JsonRedisSerializer specifically for SessionDetails
 		Jackson2JsonRedisSerializer<SessionDetails> sessionDetailsSerializer = new Jackson2JsonRedisSerializer<>(
 				SessionDetails.class);
-
-		// Set the default serializer to Jackson2JsonRedisSerializer for values
 		template.setValueSerializer(sessionDetailsSerializer);
-
-		// Set the default serializer for keys (using String RedisSerializer for keys)
 		template.setKeySerializer(RedisSerializer.string());
 
 		return template;
