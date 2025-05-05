@@ -8,7 +8,6 @@ import com.acs.web.dto.CreateNetworkDTO;
 import com.acs.web.dto.CreateVolumeDTO;
 import com.acs.web.dto.DeleteNetworkDTO;
 import com.acs.web.dto.GetUserKeysDTO;
-import com.acs.web.dto.ListNetworksDTO;
 import com.acs.web.dto.LoginRequest;
 import com.acs.web.dto.UpdateNetworkDTO;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -18,9 +17,9 @@ import reactor.core.publisher.Mono;
 public interface AcsService {
 	
 	Mono<ResponseEntity<JsonNode>> login(LoginRequest loginRequest);
-	Mono<ResponseEntity<JsonNode>> logout(String userId );
+	Mono<ResponseEntity<JsonNode>> logout();
 	Mono<ResponseEntity<JsonNode>> getUserKeys(GetUserKeysDTO getUserKeysDTO);
-	Mono<ResponseEntity<JsonNode>> listNetworks(ListNetworksDTO listNetworksDTO);
+	Mono<ResponseEntity<JsonNode>> listNetworks(Map<String, String> queryParams);
 	Mono<ResponseEntity<JsonNode>> createNetwork(CreateNetworkDTO createNetworkDTO);
 	Mono<ResponseEntity<JsonNode>> deleteNetwork(DeleteNetworkDTO deleteNetworkDTO);
 	Mono<ResponseEntity<JsonNode>> queryAsyncJobResult(Map<String, String> param);

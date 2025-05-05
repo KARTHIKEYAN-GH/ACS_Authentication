@@ -17,14 +17,14 @@ import com.acs.authentication.repo.ConfigurationRepository;
 
 @Component
 public class SignatureUtil {
-	
+
 	private final ConfigurationRepository configRepo;
 
-    @Autowired
-    public SignatureUtil(ConfigurationRepository configRepo) {
-        this.configRepo = configRepo;
-    }
-    
+	@Autowired
+	public SignatureUtil(ConfigurationRepository configRepo) {
+		this.configRepo = configRepo;
+	}
+
 	public static String generateSignature(Map<String, String> queryParams) {
 		try {
 			String endpoint = "http://10.30.11.31:8080/client/api?";
@@ -37,7 +37,7 @@ public class SignatureUtil {
 			StringBuilder query = new StringBuilder();
 			for (Map.Entry<String, String> entry : sortedParams.entrySet()) {
 				if ("userId".equalsIgnoreCase(entry.getKey()) && ("apikey".equalsIgnoreCase(entry.getKey()))) {
-					continue; // Skip userId  and apikey while signing
+					continue; // Skip userId and apikey while signing
 				}
 				query.append(entry.getKey().toLowerCase()).append("=").append(entry.getValue().toLowerCase())
 						.append("&");
@@ -49,7 +49,8 @@ public class SignatureUtil {
 
 			// Step 3: Sign using HMAC SHA-1
 			Mac mac = Mac.getInstance("HmacSHA1");
-			SecretKeySpec keySpec = new SecretKeySpec(queryParams.get("secretkey").getBytes(StandardCharsets.UTF_8), "HmacSHA1");
+			SecretKeySpec keySpec = new SecretKeySpec(queryParams.get("secretkey").getBytes(StandardCharsets.UTF_8),
+					"HmacSHA1");
 			mac.init(keySpec);
 			byte[] rawHmac = mac.doFinal(stringToSign.getBytes(StandardCharsets.UTF_8));
 

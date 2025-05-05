@@ -11,5 +11,4 @@ public class DestroyVolumeRequest {
 	private String secretkey;
 	private String response;
 
-
 }

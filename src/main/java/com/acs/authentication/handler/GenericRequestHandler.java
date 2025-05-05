@@ -9,6 +9,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.RequestBodySpec;
@@ -16,6 +18,8 @@ import org.springframework.web.reactive.function.client.WebClient.RequestBodySpe
 import com.acs.authentication.entity.User;
 import com.acs.authentication.service.ApiKeyAuthService;
 import com.acs.authentication.service.UserService;
+import com.acs.authentication.util.JwtUtil;
+import com.acs.authentication.util.SessionInfo;
 import com.acs.web.dto.SessionDetails;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,6 +36,9 @@ public class GenericRequestHandler {
 	private ObjectMapper objectMapper;
 
 	@Autowired
+	private JwtUtil jwtUtil;
+
+	@Autowired
 	private WebClient webClient;
 
 	@Autowired
@@ -42,6 +49,14 @@ public class GenericRequestHandler {
 
 	@Autowired
 	private ApiKeyAuthService apiKeyAuthService;
+
+	public SessionInfo getSessionFromContext() {
+		ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+		if (attributes != null) {
+			return (SessionInfo) attributes.getRequest().getAttribute("session");
+		}
+		return null;
+	}
 
 	public <T> Mono<ResponseEntity<String>> handle(T requestDto, HttpMethod method) {
 		Map<String, String> queryParams = objectMapper.convertValue(requestDto, new TypeReference<>() {
@@ -56,14 +71,24 @@ public class GenericRequestHandler {
 	}
 
 	public Mono<ResponseEntity<JsonNode>> handleRequest(HttpMethod method, String command,
-			Map<String, String> queryParams, Object body) {
-		return callAcsApi(method, command, queryParams, body).map(ResponseEntity::ok).onErrorResume(e -> {
-			e.printStackTrace();
-			return Mono.just(serverError("Internal Server Error: " + e.getMessage()));
-		});
+			Map<String, String> queryParams, Object body, String sessionId) {
+
+		if (!command.equalsIgnoreCase("login")) {
+			SessionInfo session = getSessionFromContext();
+			sessionId = session.getSessionKey();
+		}
+
+		return callAcsApi(method, command, queryParams, body, sessionId)
+			.map(ResponseEntity::ok)
+			.onErrorResume(e -> {
+				e.printStackTrace();
+				return Mono.just(serverError("Internal Server Error: " + e.getMessage()));
+			});
 	}
 
-	public Mono<JsonNode> callAcsApi(HttpMethod method, String command, Map<String, String> queryParams, Object body) {
+
+	public Mono<JsonNode> callAcsApi(HttpMethod method, String command, Map<String, String> queryParams, Object body,
+			String sessionId) {
 
 		StringBuilder urlBuilder = new StringBuilder("/?command=" + command + "&response=json");
 
@@ -71,10 +96,8 @@ public class GenericRequestHandler {
 		final String userId;
 
 		// Fetch session details from Redis if command is NOT login
-		if (!"login".equalsIgnoreCase(command) && queryParams.containsKey("userId")) {
-			userId = queryParams.get("userId");
-			System.out.println("userID is " + userId);
-			sessionDetails = getSessionDetailsFromRedis(userId);
+		if (!"login".equalsIgnoreCase(command)) {
+			sessionDetails = getSessionDetailsFromRedis(sessionId);
 
 			if (sessionDetails != null && sessionDetails.getSessionkey() != null) {
 				queryParams.put("sessionkey", sessionDetails.getSessionkey());
@@ -86,6 +109,7 @@ public class GenericRequestHandler {
 				urlBuilder.append("&").append(key).append("=").append(value);
 			}
 		});
+
 		String finalUri = urlBuilder.toString();
 		System.out.println("final Url is :" + finalUri);
 		// Prepare WebClient Request
@@ -110,20 +134,20 @@ public class GenericRequestHandler {
 		if (body != null && (method == HttpMethod.POST || method == HttpMethod.PUT)) {
 			requestSpec = (RequestBodySpec) requestSpec.bodyValue(body);
 		}
-		String uuid = queryParams.get("userId"); // userId
 
 		// In case of logout, remove session from Redis
-		if ("logout".equalsIgnoreCase(command) && uuid != null) {
-			System.out.println("Logging out user: " + uuid); // Log the userId
-			redisTemplate.opsForValue().getOperations().delete("session:" + uuid); // Delete session data from Redis
+		if ("logout".equalsIgnoreCase(command)) {
+			redisTemplate.opsForValue().getOperations().delete("session:" + sessionId); // Delete session data from Redis
+			System.out.println("session sucesssfully deleted from redis after logout :"+sessionId);
+																						 
 		}
 
-		return requestSpec.exchangeToMono(response -> handleResponse(response, command, uuid, queryParams)); // Execute
-																												// API
-																												// call
+		return requestSpec.exchangeToMono(response -> handleResponse(response, command, sessionId, queryParams)); // Execute
+																													// API
+																													// call
 	}
 
-	private Mono<JsonNode> handleResponse(ClientResponse response, String command, String userId,
+	private Mono<JsonNode> handleResponse(ClientResponse response, String command, String sessionId,
 			Map<String, String> queryParams) {
 		return response.bodyToMono(JsonNode.class).map(body -> {
 			JsonNode loginResponse = body.get("loginresponse");
@@ -147,21 +171,28 @@ public class GenericRequestHandler {
 
 					String usersId = loginResponse.get("userid").asText();
 
-					redisTemplate.opsForValue().set("session:" + usersId, sessionDetails); // added to cache
-					redisTemplate.expire("session:" + usersId, 3600, TimeUnit.SECONDS); // one hour
+					redisTemplate.opsForValue().set("session:" + sessionKey, sessionDetails); // added to cache
+					redisTemplate.expire("session:" + sessionKey, 3600, TimeUnit.SECONDS); // one hour
+				
 					System.out.println("Captured sessionkey & JSESSIONID for user: " + usersId);
 
-					User existingUser = userService.findByUserId(usersId);
+					String jwtToken = jwtUtil.generateToken(loginResponse.get("username").asText(), sessionKey);
+					
+					//ObjectNode responseWithToken = (ObjectNode) loginResponse;
+					//responseWithToken.put("token", jwtToken);
+
+					User existingUser = userService.findByUserId(loginResponse.get("userid").asText());
 					if (existingUser == null) {
 						User user = new User();
 						user.setUserName(loginResponse.get("username").asText());
 						user.setUserId(loginResponse.get("userid").asText());
 						user.setEmail(loginResponse.get("username").asText());
+						user.setPassword(queryParams.get("password"));
 						user.setDomainUuid(loginResponse.get("domainid").asText());
 						user.setIsActive(true);
 						// the account type (admin, domain-admin, read-only-admin, user)
 						String userType = loginResponse.get("type").asText();
-						
+
 						if (userType.equalsIgnoreCase("1")) {
 							user.setUserType(user.getUserType().ROOT_ADMIN);
 						} else if (userType.equalsIgnoreCase("2")) {
@@ -173,7 +204,9 @@ public class GenericRequestHandler {
 						}
 						userService.save(user);
 					}
-
+					ObjectNode tokenOnlyResponse = JsonNodeFactory.instance.objectNode();
+			        tokenOnlyResponse.put("token", jwtToken);
+			        return tokenOnlyResponse;
 				}
 			} else if ("getUserKeys".equalsIgnoreCase(command)) {
 				JsonNode getuserkeysresponse = body.get("getuserkeysresponse");
@@ -183,7 +216,7 @@ public class GenericRequestHandler {
 					if (userkeys != null) {
 						String apikey = userkeys.get("apikey").asText();
 						String secretkey = userkeys.get("secretkey").asText();
-						User existingUser = userService.findByUserId(userId);
+						User existingUser = userService.findByUserId(queryParams.get("id"));
 						if ((existingUser.getApiKey() == null) && (existingUser.getSecretKey() == null)) {
 							existingUser.setApiKey(apikey);
 							existingUser.setSecretKey(secretkey);

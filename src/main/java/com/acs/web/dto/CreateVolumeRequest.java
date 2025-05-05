@@ -11,5 +11,5 @@ public class CreateVolumeRequest {
 	private String zoneid;
 	private String respone;
 	private String apikey;
-	private String secretkey; 
+	private String secretkey;
 }

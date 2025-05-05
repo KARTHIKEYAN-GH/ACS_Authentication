@@ -10,5 +10,4 @@ import com.acs.authentication.entity.AppConfiguration;
 public interface ConfigurationRepository extends JpaRepository<AppConfiguration, Long> {
 	@Query("SELECT c.baseUrl FROM AppConfiguration c WHERE c.id = 1")
 	String findBaseUrlByIdOne();
-	// AppConfiguration findTopByOrderByIdAsc();
 }

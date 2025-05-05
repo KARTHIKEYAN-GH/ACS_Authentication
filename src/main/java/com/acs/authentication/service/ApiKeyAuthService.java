@@ -8,5 +8,5 @@ import reactor.core.publisher.Mono;
 
 public interface ApiKeyAuthService {
 
-	public Mono<String> callAcsViaKeys(HttpMethod method,Map<String,String> queryParams,Object body);
+	public Mono<String> callAcsViaKeys(HttpMethod method, Map<String, String> queryParams, Object body);
 }

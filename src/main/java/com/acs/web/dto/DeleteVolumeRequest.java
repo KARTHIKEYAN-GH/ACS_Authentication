@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class DeleteVolumeRequest {
-	private String id;	//volumeid
+	private String id; // volumeid
 	private String command;
 	private String response;
 	private String apikey;

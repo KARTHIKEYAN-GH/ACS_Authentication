@@ -1,6 +1,6 @@
 package com.acs.authentication.exception;
 
-public class ACSException extends RuntimeException{
+public class ACSException extends RuntimeException {
 
 	public ACSException(String message) {
 		super(message);

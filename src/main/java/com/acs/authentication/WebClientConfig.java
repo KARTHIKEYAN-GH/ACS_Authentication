@@ -20,10 +20,9 @@ public class WebClientConfig {
 	public WebClient webClient() {
 		String baseUrl = configRepo.findBaseUrlByIdOne();
 
-		return WebClient.builder()
-				.baseUrl(baseUrl)
+		return WebClient.builder().baseUrl(baseUrl)
 				.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-				//.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
+				// .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
 				.build();
-	}	
+	}
 }

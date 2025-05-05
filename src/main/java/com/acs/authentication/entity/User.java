@@ -19,50 +19,49 @@ import lombok.Setter;
 @Data
 public class User {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name = "user_id")
-    private String userId;
+	@Column(name = "user_id")
+	private String userId;
 
-    @Column(name = "user_name")
-    private String userName;
+	@Column(name = "user_name")
+	private String userName;
 
-    @Column(name = "password")
-    private String password;
+	@Column(name = "password")
+	private String password;
 
-    @Column(name = "email")
-    private String email;
+	@Column(name = "email")
+	private String email;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "user_type")
-    private UserType userType;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "user_type")
+	private UserType userType;
 
-    @Column(name = "is_active")
-    private Boolean isActive;
+	@Column(name = "is_active")
+	private Boolean isActive;
 
-    @Column(name = "account_id")
-    private Long accountId;
+	@Column(name = "account_id")
+	private Long accountId;
 
-    @Column(name = "domain_id")
-    private Long domainId;
-    
-    @Column(name = "domain_uuid")
-    private String domainUuid;
-    
-    @Column(name = "api_key")
-    private String apiKey;
+	@Column(name = "domain_id")
+	private Long domainId;
 
-    @Column(name = "secret_key")
-    private String secretKey;
+	@Column(name = "domain_uuid")
+	private String domainUuid;
 
-    @ManyToOne
-    @JoinColumn(name = "domain_id", referencedColumnName = "id", insertable = false, updatable = false)
-    private Domain domain;
+	@Column(name = "api_key")
+	private String apiKey;
 
-    public enum UserType {
-        DOMAIN_ADMIN, ROOT_ADMIN, USER,READ_ONLY_ADMIN;
-    }
+	@Column(name = "secret_key")
+	private String secretKey;
+
+	@ManyToOne
+	@JoinColumn(name = "domain_id", referencedColumnName = "id", insertable = false, updatable = false)
+	private Domain domain;
+
+	public enum UserType {
+		DOMAIN_ADMIN, ROOT_ADMIN, USER, READ_ONLY_ADMIN;
+	}
 }
-

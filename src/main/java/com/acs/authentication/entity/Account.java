@@ -26,9 +26,10 @@ public class Account {
 	private String uuid;
 
 	/** Domain of the account. */
-	//@JoinColumn(name = "domain_id", referencedColumnName = "Id", updatable = false, insertable = false)
-	//@ManyToOne
-	//private Domain domain;
+	// @JoinColumn(name = "domain_id", referencedColumnName = "Id", updatable =
+	// false, insertable = false)
+	// @ManyToOne
+	// private Domain domain;
 
 	/** Domain id of the account. */
 	@Column(name = "domain_id")

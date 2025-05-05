@@ -3,11 +3,9 @@ package com.acs.web.dto;
 import lombok.Data;
 
 @Data
-public class QueryAsyncJobResult {
-
-	private String jobid;
+public class Login {
 	private String command;
+	private String response;
 	private String apikey;
 	private String secretkey;
-	private String response;
 }

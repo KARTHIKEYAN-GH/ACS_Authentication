@@ -7,8 +7,8 @@ import com.acs.authentication.entity.User;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    
-    User findByUserNameAndPassword(String userName, String password);
+
+	User findByUserNameAndPassword(String userName, String password);
 
 	User findByUserId(String userId);
 }
