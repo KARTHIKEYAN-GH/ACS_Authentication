@@ -19,6 +19,7 @@ import com.acs.authentication.entity.User;
 import com.acs.authentication.service.ApiKeyAuthService;
 import com.acs.authentication.service.UserService;
 import com.acs.authentication.util.JwtUtil;
+import com.acs.authentication.util.PasswordCryptoUtil;
 import com.acs.authentication.util.SessionInfo;
 import com.acs.web.dto.SessionDetails;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -46,7 +47,7 @@ public class GenericRequestHandler {
 
 	@Autowired
 	private RedisTemplate<String, Object> redisTemplate;
-
+	
 	@Autowired
 	private ApiKeyAuthService apiKeyAuthService;
 

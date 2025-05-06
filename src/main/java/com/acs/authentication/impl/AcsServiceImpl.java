@@ -3,6 +3,8 @@ package com.acs.authentication.impl;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.acs.authentication.util.*;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -24,22 +26,30 @@ import reactor.core.publisher.Mono;
 public class AcsServiceImpl implements AcsService {
 	
 	@Autowired
+	private PasswordCryptoUtil PasswordCryptoUtil;
+	
+	@Autowired
 	private GenericRequestHandler requestHandler;
 
 	public Mono<ResponseEntity<JsonNode>> login(LoginRequest loginRequest) {
-		String command = "login";
+		String decryptedPassword=null;
+		try {
+			decryptedPassword = PasswordCryptoUtil.decrypt(loginRequest.getPassword());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		Map<String, String> queryParams = new HashMap<>();
 		queryParams.put("username", loginRequest.getUsername());
-		queryParams.put("password", loginRequest.getPassword());
+		queryParams.put("password", decryptedPassword);
 
 		if (!loginRequest.getUsername().equalsIgnoreCase("admin")) {
 			if (loginRequest.getDomain() == null || loginRequest.getDomain().isEmpty()) {
-				return Mono.just(requestHandler.error("Enter Domain: e.g. \\\"domain\\\": \\\"sample@gmail.com\\\""));
+				return Mono.just(requestHandler.error("Enter Domain: example@gmail.com"));
 			}
 			queryParams.put("domain", loginRequest.getDomain());
 		}
 
-		return requestHandler.handleRequest(HttpMethod.POST, command, queryParams, loginRequest, null);
+		return requestHandler.handleRequest(HttpMethod.POST, "login", queryParams, loginRequest, null);
 	}
 
 	@Override
