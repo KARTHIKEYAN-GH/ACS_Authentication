@@ -19,7 +19,6 @@ import com.acs.authentication.entity.User;
 import com.acs.authentication.service.ApiKeyAuthService;
 import com.acs.authentication.service.UserService;
 import com.acs.authentication.util.JwtUtil;
-import com.acs.authentication.util.PasswordCryptoUtil;
 import com.acs.authentication.util.SessionInfo;
 import com.acs.web.dto.SessionDetails;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -105,6 +104,7 @@ public class GenericRequestHandler {
 			if (sessionDetails == null || sessionDetails.getSessionkey() == null) {
 				return Mono.just(error("Please login").getBody());
 			}
+
 		}
 		
 		// Build final URL
@@ -147,8 +147,7 @@ public class GenericRequestHandler {
 		}
 
 		return requestSpec.exchangeToMono(response -> handleResponse(response, command, sessionId, queryParams)); // Execute
-																													// API
-																													// call
+																													// API call																											// call
 	}
 
 	private Mono<JsonNode> handleResponse(ClientResponse response, String command, String sessionId,
