@@ -94,7 +94,6 @@ public class GenericRequestHandler {
 		StringBuilder urlBuilder = new StringBuilder("/?command=" + command + "&response=json");
 
 		SessionDetails sessionDetails = null;
-		final String userId;
 
 		// Fetch session details from Redis if command is NOT login
 		if (!"login".equalsIgnoreCase(command)) {
@@ -103,7 +102,11 @@ public class GenericRequestHandler {
 			if (sessionDetails != null && sessionDetails.getSessionkey() != null) {
 				queryParams.put("sessionkey", sessionDetails.getSessionkey());
 			}
+			if (sessionDetails == null || sessionDetails.getSessionkey() == null) {
+				return Mono.just(error("Please login").getBody());
+			}
 		}
+		
 		// Build final URL
 		queryParams.forEach((key, value) -> {
 			if (!"userId".equalsIgnoreCase(key)) { // skip userId

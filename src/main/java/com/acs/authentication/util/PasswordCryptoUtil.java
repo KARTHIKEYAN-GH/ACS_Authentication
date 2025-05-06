@@ -31,12 +31,12 @@ public class PasswordCryptoUtil {
         return new String(decryptedBytes);
     }
     
-    public static void main (String args[]) throws Exception {
-    	PasswordCryptoUtil pc=new PasswordCryptoUtil();
-    	String encryptedPassword=pc.encrypt("@Password18");
-    	System.out.println("encryptedPassword :"+encryptedPassword);
-    	String decryptedPasswrd = pc.decrypt(encryptedPassword);
-    	System.out.println("decryptedPasswrd :"+decryptedPasswrd);
-    	
-    }
+//    public static void main (String args[]) throws Exception {
+//    	PasswordCryptoUtil pc=new PasswordCryptoUtil();
+//    	String encryptedPassword=pc.encrypt("xxyyzz");
+//    	System.out.println("encryptedPassword :"+encryptedPassword);
+//    	String decryptedPasswrd = pc.decrypt(encryptedPassword);
+//    	System.out.println("decryptedPasswrd :"+decryptedPasswrd);
+//    	
+//    }
 }
