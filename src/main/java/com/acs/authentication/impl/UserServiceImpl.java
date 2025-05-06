@@ -30,4 +30,10 @@ public class UserServiceImpl implements UserService {
 		return userRepository.findByUserId(userId);
 	}
 
+	@Override
+	public User findByUserName(String username) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

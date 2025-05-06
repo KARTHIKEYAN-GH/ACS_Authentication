@@ -27,6 +27,7 @@ public interface AcsService {
 	Mono<ResponseEntity<JsonNode>> deleteVolume(Map<String, String> queryParams);
 	Mono<ResponseEntity<JsonNode>> destroyVolume(Map<String, String> queryParams);
 	Mono<ResponseEntity<JsonNode>> updateNetwork(UpdateNetworkDTO updateNetworkDTO);
+	Mono<ResponseEntity<JsonNode>> makeRefreshTokenCall(Map<String, String> tokens);
 	
 	
 }

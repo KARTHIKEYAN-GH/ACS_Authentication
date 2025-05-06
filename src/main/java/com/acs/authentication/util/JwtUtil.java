@@ -21,7 +21,9 @@ public class JwtUtil {
 
 	private SecretKey secretKey;
 
-	private static final long EXPIRATION_TIME = 3600 * 1000; // 1 hour
+	private static final long ACCESSTOKEN_EXPIRATION_TIME = 1000 * 1000; // 1 hour
+	
+	private static final long REFRESH_TOKEN_EXPIRATION_TIME = 86400 * 1000; // 1 day
 
 	@PostConstruct
 	public void init() {
@@ -33,10 +35,18 @@ public class JwtUtil {
 				.setSubject(username)
 				.claim("sessionKey", sessionKey)
 				.setIssuedAt(new Date())
-				.setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+				.setExpiration(new Date(System.currentTimeMillis() + ACCESSTOKEN_EXPIRATION_TIME))
 				.signWith(secretKey, SignatureAlgorithm.HS256).compact();
 	}
-
+	public String generateRefreshToken(String username) {
+	    return Jwts.builder()
+	            .setSubject(username)
+	            .setIssuedAt(new Date())
+	            .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION_TIME))
+	            .signWith(secretKey, SignatureAlgorithm.HS256)
+	            .compact();
+	}
+	
 	public Claims parseToken(String token) {
 		return Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token).getBody();
 	}

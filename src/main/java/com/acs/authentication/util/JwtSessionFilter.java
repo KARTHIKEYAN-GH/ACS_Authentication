@@ -33,7 +33,6 @@ public class JwtSessionFilter extends OncePerRequestFilter {
 		    if (path.equals("/api/cloudstack/login")) {
 		        return true;
 		    }
-
 		    return false;
 		}
 
@@ -51,13 +50,11 @@ public class JwtSessionFilter extends OncePerRequestFilter {
 		}
 
 		try {
-			// SessionInfo session = jwtUtil.extractSessionInfo(authHeader);
 			SessionInfo session = jwtUtil.extractSessionInfo(authHeader);
 			request.setAttribute("session", session); // Set session info to request
 		} catch (Exception e) {
-			e.printStackTrace(); // Print full stacktrace for debugging
 			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-			response.getWriter().write("Invalid token: " + e.getMessage()); // show exact cause
+			response.getWriter().write("Invalid token : or Expired " ); 
 			return;
 		}
 

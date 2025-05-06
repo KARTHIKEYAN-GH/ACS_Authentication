@@ -175,11 +175,13 @@ public class GenericRequestHandler {
 					String usersId = loginResponse.get("userid").asText();
 
 					redisTemplate.opsForValue().set("session:" + sessionKey, sessionDetails); // added to cache
-					redisTemplate.expire("session:" + sessionKey, 3600, TimeUnit.SECONDS); // one hour
+					redisTemplate.expire("session:" + sessionKey, 1800, TimeUnit.SECONDS); // 30min  Half an hour
 				
 					System.out.println("Captured sessionkey & JSESSIONID for user: " + usersId);
-
-					String jwtToken = jwtUtil.generateToken(loginResponse.get("username").asText(), sessionKey);
+					
+					String username=loginResponse.get("username").asText();
+					String jwtToken = jwtUtil.generateToken(username, sessionKey);
+					String jwtrefreshToken = jwtUtil.generateRefreshToken(username);
 					
 					//ObjectNode responseWithToken = (ObjectNode) loginResponse;
 					//responseWithToken.put("token", jwtToken);
@@ -208,7 +210,8 @@ public class GenericRequestHandler {
 						userService.save(user);
 					}
 					ObjectNode tokenOnlyResponse = JsonNodeFactory.instance.objectNode();
-			        tokenOnlyResponse.put("token", jwtToken);
+			        tokenOnlyResponse.put("accessToken", jwtToken);
+			        tokenOnlyResponse.put("refreshToken", jwtrefreshToken);
 			        return tokenOnlyResponse;
 				}
 			} else if ("getUserKeys".equalsIgnoreCase(command)) {
@@ -242,8 +245,8 @@ public class GenericRequestHandler {
 	}
 
 	// Fetch both sessionkey and jsessionid from Redis
-	private SessionDetails getSessionDetailsFromRedis(String userId) {
-		return (SessionDetails) redisTemplate.opsForValue().get("session:" + userId);
+	private SessionDetails getSessionDetailsFromRedis(String sessionId) {
+		return (SessionDetails) redisTemplate.opsForValue().get("session:" + sessionId);
 	}
 
 	public ResponseEntity<JsonNode> error(String message) {

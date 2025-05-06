@@ -88,5 +88,11 @@ public class ACSController {
 	public Mono<ResponseEntity<JsonNode>> deleteNetwork(@RequestParam Map<String, String> param) {
 		return acsService.queryAsyncJobResult(param);
 	}
+	
+	@GetMapping("/refresh")
+	public Mono<ResponseEntity<JsonNode>> makeRefreshtokenCall(@RequestParam Map<String, String> tokens){
+		return acsService.makeRefreshTokenCall(tokens);
+		
+	}
 
 }

@@ -1,5 +1,6 @@
 package com.acs.authentication.impl;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,8 +11,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.acs.authentication.entity.User;
 import com.acs.authentication.handler.GenericRequestHandler;
 import com.acs.authentication.service.AcsService;
+import com.acs.authentication.service.UserService;
 import com.acs.web.dto.CreateNetworkDTO;
 import com.acs.web.dto.CreateVolumeDTO;
 import com.acs.web.dto.DeleteNetworkDTO;
@@ -20,6 +23,7 @@ import com.acs.web.dto.LoginRequest;
 import com.acs.web.dto.UpdateNetworkDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import io.jsonwebtoken.Claims;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -30,6 +34,12 @@ public class AcsServiceImpl implements AcsService {
 	
 	@Autowired
 	private GenericRequestHandler requestHandler;
+	
+	@Autowired
+	private JwtUtil jwtUtil;
+	
+	@Autowired 
+	private UserService userService;
 
 	public Mono<ResponseEntity<JsonNode>> login(LoginRequest loginRequest) {
 		String decryptedPassword=null;
@@ -154,6 +164,37 @@ public class AcsServiceImpl implements AcsService {
 
 		return requestHandler.handleRequest(HttpMethod.GET, "updateNetwork", queryParams, null, null);
 
+	}
+
+	@Override
+	public Mono<ResponseEntity<JsonNode>> makeRefreshTokenCall(Map<String, String> tokens) {
+	
+//		Claims accessToken=jwtUtil.parseToken(tokens.get("accessToken"));
+//		boolean accessTokenisValid =accessToken.getExpiration().before(new Date());
+//		
+//		Claims refreshToken=jwtUtil.parseToken(tokens.get("refreshToken"));
+//		boolean refreshTokenisValid =refreshToken.getExpiration().before(new Date());
+//		
+//		
+//		if(!accessTokenisValid && refreshTokenisValid)
+//		{
+//			String username=refreshToken.getSubject();
+//			User user=userService.findByUserName(username);
+//			
+//			Map<String, String> queryParams = new HashMap<>();
+//			queryParams.put("username", user.getUserName());
+//			queryParams.put("password", user.getPassword());
+//
+//			if (!user.getUserName().equalsIgnoreCase("admin")) {
+//				if (user.getDomain() == null || user.getDomain().isEmpty()) {
+//					return Mono.just(requestHandler.error("Enter Domain: example@gmail.com"));
+//				}
+//				queryParams.put("domain", user.getDomain());
+//			}
+//			
+//			return requestHandler.handleRequest(HttpMethod.GET, "login", queryParams, null, null);
+//		}
+		return null;
 	}
 
 }
