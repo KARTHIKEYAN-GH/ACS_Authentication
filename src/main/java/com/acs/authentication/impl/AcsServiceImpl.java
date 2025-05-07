@@ -22,6 +22,9 @@ import com.acs.web.dto.GetUserKeysDTO;
 import com.acs.web.dto.LoginRequest;
 import com.acs.web.dto.UpdateNetworkDTO;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.jsonwebtoken.Claims;
 import reactor.core.publisher.Mono;
@@ -37,6 +40,10 @@ public class AcsServiceImpl implements AcsService {
 	
 	@Autowired
 	private JwtUtil jwtUtil;
+	
+	@Autowired
+	private ObjectMapper objectMapper;
+
 	
 	@Autowired 
 	private UserService userService;
@@ -59,7 +66,7 @@ public class AcsServiceImpl implements AcsService {
 			queryParams.put("domain", loginRequest.getDomain());
 		}
 
-		return requestHandler.handleRequest(HttpMethod.POST, "login", queryParams, loginRequest, null);
+		return requestHandler.handleRequest(HttpMethod.POST, "login", queryParams, null, null);
 	}
 
 	@Override
@@ -169,32 +176,27 @@ public class AcsServiceImpl implements AcsService {
 	@Override
 	public Mono<ResponseEntity<JsonNode>> makeRefreshTokenCall(Map<String, String> tokens) {
 	
-//		Claims accessToken=jwtUtil.parseToken(tokens.get("accessToken"));
-//		boolean accessTokenisValid =accessToken.getExpiration().before(new Date());
-//		
-//		Claims refreshToken=jwtUtil.parseToken(tokens.get("refreshToken"));
-//		boolean refreshTokenisValid =refreshToken.getExpiration().before(new Date());
-//		
-//		
-//		if(!accessTokenisValid && refreshTokenisValid)
-//		{
-//			String username=refreshToken.getSubject();
-//			User user=userService.findByUserName(username);
-//			
-//			Map<String, String> queryParams = new HashMap<>();
-//			queryParams.put("username", user.getUserName());
-//			queryParams.put("password", user.getPassword());
-//
-//			if (!user.getUserName().equalsIgnoreCase("admin")) {
-//				if (user.getDomain() == null || user.getDomain().isEmpty()) {
-//					return Mono.just(requestHandler.error("Enter Domain: example@gmail.com"));
-//				}
-//				queryParams.put("domain", user.getDomain());
-//			}
-//			
-//			return requestHandler.handleRequest(HttpMethod.GET, "login", queryParams, null, null);
-//		}
-		return null;
-	}
+		boolean accessTokenisExpired = jwtUtil.isTokenExpired(tokens.get("accessToken"));
+		boolean refreshTokenisExpired = jwtUtil.isTokenExpired(tokens.get("refreshToken"));
+		
+		if(accessTokenisExpired && !refreshTokenisExpired)
+		{
+			Claims refreshToken=jwtUtil.parseToken(tokens.get("refreshToken"));
+			String username=refreshToken.getSubject();
+			
+			User user=userService.findByUserName(username);
+			Map<String, String> queryParams = new HashMap<>();
+			queryParams.put("username", user.getUserName());
+			queryParams.put("password", user.getPassword());
 
+			if (!user.getUserName().equalsIgnoreCase("admin")) {
+				queryParams.put("domain", user.getUserName());
+				}	
+			return requestHandler.handleRequest(HttpMethod.POST, "login", queryParams, null, null);
+		}
+		ObjectNode responseNode = objectMapper.createObjectNode();
+		responseNode.put("message", "invalidTokens");
+		return Mono.just(ResponseEntity.badRequest().body(responseNode));		
+	}
+	
 }

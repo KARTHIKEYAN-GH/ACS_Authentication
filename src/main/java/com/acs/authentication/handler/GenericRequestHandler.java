@@ -21,6 +21,7 @@ import com.acs.authentication.service.UserService;
 import com.acs.authentication.util.JwtUtil;
 import com.acs.authentication.util.SessionInfo;
 import com.acs.web.dto.SessionDetails;
+import com.acs.web.dto.TokenResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -87,7 +88,7 @@ public class GenericRequestHandler {
 	}
 
 
-	public Mono<JsonNode> callAcsApi(HttpMethod method, String command, Map<String, String> queryParams, Object body,
+	public Mono<JsonNode> callAcsApi(HttpMethod method, String command, Map<String, String> queryParams,Object body,
 			String sessionId) {
 
 		StringBuilder urlBuilder = new StringBuilder("/?command=" + command + "&response=json");
@@ -102,7 +103,7 @@ public class GenericRequestHandler {
 				queryParams.put("sessionkey", sessionDetails.getSessionkey());
 			}
 			if (sessionDetails == null || sessionDetails.getSessionkey() == null) {
-				return Mono.just(error("Please login").getBody());
+				return Mono.just(error("Pleaselogin").getBody());
 			}
 
 		}
@@ -133,10 +134,6 @@ public class GenericRequestHandler {
 			System.out.println("sessionkey = " + (sessionDetails != null ? sessionDetails.getSessionkey() : "null"));
 			System.out.println("JSESSIONID = " + (sessionDetails != null ? sessionDetails.getJsessionid() : "null"));
 			System.out.println("---------------------------------------------");
-		}
-		// Add body if required
-		if (body != null && (method == HttpMethod.POST || method == HttpMethod.PUT)) {
-			requestSpec = (RequestBodySpec) requestSpec.bodyValue(body);
 		}
 
 		// In case of logout, remove session from Redis
@@ -209,7 +206,7 @@ public class GenericRequestHandler {
 						}
 						userService.save(user);
 					}
-					ObjectNode tokenOnlyResponse = JsonNodeFactory.instance.objectNode();
+  					ObjectNode tokenOnlyResponse = JsonNodeFactory.instance.objectNode();
 			        tokenOnlyResponse.put("accessToken", jwtToken);
 			        tokenOnlyResponse.put("refreshToken", jwtrefreshToken);
 			        return tokenOnlyResponse;

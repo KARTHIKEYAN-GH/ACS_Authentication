@@ -38,7 +38,12 @@ public class ACSController {
 	public Mono<ResponseEntity<JsonNode>> login(@RequestBody LoginRequest loginRequest) {
 		return acsService.login(loginRequest);
 	}
-
+	
+	@GetMapping("/refresh")
+	public Mono<ResponseEntity<JsonNode>> makeRefreshtokenCall(@RequestParam Map<String, String> tokens){
+		return acsService.makeRefreshTokenCall(tokens);
+		
+	}
 	@GetMapping("/logout")
 	public Mono<ResponseEntity<JsonNode>> logout() {
 		return acsService.logout();
@@ -89,10 +94,6 @@ public class ACSController {
 		return acsService.queryAsyncJobResult(param);
 	}
 	
-	@GetMapping("/refresh")
-	public Mono<ResponseEntity<JsonNode>> makeRefreshtokenCall(@RequestParam Map<String, String> tokens){
-		return acsService.makeRefreshTokenCall(tokens);
-		
-	}
+	
 
 }

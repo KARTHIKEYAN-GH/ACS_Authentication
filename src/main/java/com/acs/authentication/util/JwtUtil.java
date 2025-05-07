@@ -21,9 +21,9 @@ public class JwtUtil {
 
 	private SecretKey secretKey;
 
-	private static final long ACCESSTOKEN_EXPIRATION_TIME = 1000 * 1000; // 1 hour
+	private static final long ACCESSTOKEN_EXPIRATION_TIME = 600 * 1000; // 10 mins	3600 *1000 
 	
-	private static final long REFRESH_TOKEN_EXPIRATION_TIME = 86400 * 1000; // 1 day
+	private static final long REFRESHTOKEN_EXPIRATION_TIME = 3600 * 1000; // 1 hour
 
 	@PostConstruct
 	public void init() {
@@ -42,7 +42,7 @@ public class JwtUtil {
 	    return Jwts.builder()
 	            .setSubject(username)
 	            .setIssuedAt(new Date())
-	            .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION_TIME))
+	            .setExpiration(new Date(System.currentTimeMillis() + REFRESHTOKEN_EXPIRATION_TIME))
 	            .signWith(secretKey, SignatureAlgorithm.HS256)
 	            .compact();
 	}
@@ -61,4 +61,16 @@ public class JwtUtil {
 
 		return new SessionInfo(username, sessionKey);
 	}
+	
+	public boolean isTokenExpired(String token) {
+	    try {
+	        Claims claims = parseToken(token);
+	        return claims.getExpiration().before(new Date());
+	    } catch (io.jsonwebtoken.ExpiredJwtException e) {
+	        return true;
+	    } catch (Exception e) {
+	        return true; // Treat other parsing errors as expired or invalid
+	    }
+	}
+
 }

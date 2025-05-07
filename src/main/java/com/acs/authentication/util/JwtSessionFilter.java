@@ -30,7 +30,7 @@ public class JwtSessionFilter extends OncePerRequestFilter {
 		        return true;
 		    }
 
-		    if (path.equals("/api/cloudstack/login")) {
+		    if (path.equals("/api/cloudstack/login") || path.equals("/api/cloudstack/refresh")) {
 		        return true;
 		    }
 		    return false;
