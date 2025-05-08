@@ -1,10 +1,7 @@
 package com.acs.authentication.impl;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-
-import com.acs.authentication.util.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
@@ -15,6 +12,8 @@ import com.acs.authentication.entity.User;
 import com.acs.authentication.handler.GenericRequestHandler;
 import com.acs.authentication.service.AcsService;
 import com.acs.authentication.service.UserService;
+import com.acs.authentication.util.JwtUtil;
+import com.acs.authentication.util.PasswordCryptoUtil;
 import com.acs.web.dto.CreateNetworkDTO;
 import com.acs.web.dto.CreateVolumeDTO;
 import com.acs.web.dto.DeleteNetworkDTO;
@@ -23,10 +22,8 @@ import com.acs.web.dto.LoginRequest;
 import com.acs.web.dto.UpdateNetworkDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import io.jsonwebtoken.Claims;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -47,7 +44,7 @@ public class AcsServiceImpl implements AcsService {
 	@Autowired
 	private UserService userService;
 
-	public Mono<ResponseEntity<JsonNode>> login(LoginRequest loginRequest) {
+	public Mono login(LoginRequest loginRequest) {
 		String decryptedPassword = null;
 		try {
 			decryptedPassword = PasswordCryptoUtil.decrypt(loginRequest.getPassword());
@@ -59,19 +56,15 @@ public class AcsServiceImpl implements AcsService {
 		queryParams.put("password", decryptedPassword);
 
 		if (!loginRequest.getUsername().equalsIgnoreCase("admin")) {
-			if (loginRequest.getDomain() == null || loginRequest.getDomain().isEmpty()) {
-				return Mono.just(requestHandler.error("Enter Domain: example@gmail.com"));
-			}
-			queryParams.put("domain", loginRequest.getDomain());
-		}
 
+			queryParams.put("domain", loginRequest.getUsername());
+		}
 		return requestHandler.handleRequest(HttpMethod.POST, "login", queryParams, null, null);
 	}
 
 	@Override
 	public Mono<ResponseEntity<JsonNode>> getUserKeys(GetUserKeysDTO getUserKeysDTO) {
 		Map<String, String> queryParams = new HashMap<>();
-		queryParams.put("userId", getUserKeysDTO.getUserId());
 		queryParams.put("domainId", getUserKeysDTO.getDomainId());
 		queryParams.put("id", getUserKeysDTO.getId());
 		return requestHandler.handleRequest(HttpMethod.GET, "getUserKeys", queryParams, null, null);
@@ -82,6 +75,7 @@ public class AcsServiceImpl implements AcsService {
 	public Mono<ResponseEntity<JsonNode>> listNetworks(Map<String, String> param) {
 		Map<String, String> queryParams = new HashMap<>();
 		queryParams.put("domainId", param.get("domainId"));
+		queryParams.put("id", param.get("id"));
 		return requestHandler.handleRequest(HttpMethod.GET, "listNetworks", queryParams, null, null);
 	}
 
@@ -152,24 +146,29 @@ public class AcsServiceImpl implements AcsService {
 
 	@Override
 	public Mono<ResponseEntity<JsonNode>> updateNetwork(UpdateNetworkDTO updateNetworkDTO) {
+		ObjectNode responseNode = objectMapper.createObjectNode();
 		Map<String, String> queryParams = new HashMap();
-		queryParams.put("userId", updateNetworkDTO.getUserId());
-		queryParams.put("id", updateNetworkDTO.getId());
+		String networkingId = updateNetworkDTO.getId();
 
-		if (updateNetworkDTO.getName() != null)
-			queryParams.put("name", updateNetworkDTO.getName());
+		if (networkingId != null) {
+			queryParams.put("id", updateNetworkDTO.getId());
 
-		if (updateNetworkDTO.getSourcenatipaddress() != null)
-			queryParams.put("sourcenatipaddress", updateNetworkDTO.getSourcenatipaddress());
+			if (updateNetworkDTO.getName() != null)
+				queryParams.put("name", updateNetworkDTO.getName());
 
-		if (updateNetworkDTO.getNetworkofferingid() != null)
-			queryParams.put("networkofferingid", updateNetworkDTO.getNetworkofferingid());
+			if (updateNetworkDTO.getSourcenatipaddress() != null)
+				queryParams.put("sourcenatipaddress", updateNetworkDTO.getSourcenatipaddress());
 
-		if (updateNetworkDTO.getDns2() != null)
-			queryParams.put("dns2", updateNetworkDTO.getDns2());
+			if (updateNetworkDTO.getNetworkofferingid() != null)
+				queryParams.put("networkofferingid", updateNetworkDTO.getNetworkofferingid());
 
-		return requestHandler.handleRequest(HttpMethod.GET, "updateNetwork", queryParams, null, null);
+			if (updateNetworkDTO.getDns2() != null)
+				queryParams.put("dns2", updateNetworkDTO.getDns2());
 
+			return requestHandler.handleRequest(HttpMethod.GET, "updateNetwork", queryParams, null, null);
+		}
+		responseNode.put("message", "enter network id");
+		return Mono.just(ResponseEntity.badRequest().body(responseNode));
 	}
 
 	@Override
@@ -178,8 +177,8 @@ public class AcsServiceImpl implements AcsService {
 		String refreshToken = tokens.get("refreshToken");
 		String accessToken = tokens.get("accessToken");
 
-		boolean accessTokenisExpired = jwtUtil.isTokenExpired(refreshToken);
-		boolean refreshTokenisExpired = jwtUtil.isTokenExpired(accessToken);
+		boolean accessTokenisExpired = jwtUtil.isTokenExpired(accessToken);
+		boolean refreshTokenisExpired = jwtUtil.isTokenExpired(refreshToken);
 
 		String usernameofresfreshToken = jwtUtil.getSubject(refreshToken);
 		String usernameofaccessToken = jwtUtil.getSubject(accessToken);
@@ -200,7 +199,7 @@ public class AcsServiceImpl implements AcsService {
 				}
 				return requestHandler.handleRequest(HttpMethod.POST, "login", queryParams, null, null);
 			}
-			responseNode.put("message", "Tokens Expired");
+			responseNode.put("message", "Invalid or Token Expired");
 			return Mono.just(ResponseEntity.badRequest().body(responseNode));
 		}
 		responseNode.put("message", "InvalidTokens");

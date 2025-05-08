@@ -17,25 +17,19 @@ public class JwtSessionFilter extends OncePerRequestFilter {
 	@Autowired
 	private JwtUtil jwtUtil;
 
-//	@Override
-//	protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-//		String path = request.getRequestURI();
-//		    return path != null && path.equals("/api/cloudstack/login");
-//	}
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-		 String path = request.getRequestURI();
+		String path = request.getRequestURI();
 
-		    if (path.startsWith("/api/acs/")) {
-		        return true;
-		    }
+		// if (path.startsWith("/api/acs/")) {
+		// return true;
+		// }
 
-		    if (path.equals("/api/cloudstack/login") || path.equals("/api/cloudstack/refresh")) {
-		        return true;
-		    }
-		    return false;
+		if (path.equals("/api/cloudstack/login") || path.equals("/api/cloudstack/refresh")) {
+			return true;
 		}
-
+		return false;
+	}
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -54,7 +48,7 @@ public class JwtSessionFilter extends OncePerRequestFilter {
 			request.setAttribute("session", session); // Set session info to request
 		} catch (Exception e) {
 			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-			response.getWriter().write("Invalid token : or Expired " ); 
+			response.getWriter().write("Invalid token : or Expired ");
 			return;
 		}
 

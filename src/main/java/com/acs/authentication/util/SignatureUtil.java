@@ -10,20 +10,10 @@ import java.util.TreeMap;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import com.acs.authentication.repo.ConfigurationRepository;
 
 @Component
 public class SignatureUtil {
-
-	private final ConfigurationRepository configRepo;
-
-	@Autowired
-	public SignatureUtil(ConfigurationRepository configRepo) {
-		this.configRepo = configRepo;
-	}
 
 	public static String generateSignature(Map<String, String> queryParams) {
 		try {

@@ -21,9 +21,9 @@ public class JwtUtil {
 
 	private SecretKey secretKey;
 
-	private static final long ACCESSTOKEN_EXPIRATION_TIME = 180 * 1000; 
-	
-	private static final long REFRESHTOKEN_EXPIRATION_TIME = 360 * 1000;
+	private static final long ACCESSTOKEN_EXPIRATION_TIME = 600 * 1000; // 10 mins
+
+	private static final long REFRESHTOKEN_EXPIRATION_TIME = 1200 * 1000; // 20 mins
 
 	@PostConstruct
 	public void init() {
@@ -31,22 +31,17 @@ public class JwtUtil {
 	}
 
 	public String generateToken(String username, String sessionKey) {
-		return Jwts.builder()
-				.setSubject(username)
-				.claim("sessionKey", sessionKey)
-				.setIssuedAt(new Date())
+		return Jwts.builder().setSubject(username).claim("sessionKey", sessionKey).setIssuedAt(new Date())
 				.setExpiration(new Date(System.currentTimeMillis() + ACCESSTOKEN_EXPIRATION_TIME))
 				.signWith(secretKey, SignatureAlgorithm.HS256).compact();
 	}
+
 	public String generateRefreshToken(String username) {
-	    return Jwts.builder()
-	            .setSubject(username)
-	            .setIssuedAt(new Date())
-	            .setExpiration(new Date(System.currentTimeMillis() + REFRESHTOKEN_EXPIRATION_TIME))
-	            .signWith(secretKey, SignatureAlgorithm.HS256)
-	            .compact();
+		return Jwts.builder().setSubject(username).setIssuedAt(new Date())
+				.setExpiration(new Date(System.currentTimeMillis() + REFRESHTOKEN_EXPIRATION_TIME))
+				.signWith(secretKey, SignatureAlgorithm.HS256).compact();
 	}
-	
+
 	public Claims parseToken(String token) {
 		return Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token).getBody();
 	}
@@ -61,32 +56,26 @@ public class JwtUtil {
 
 		return new SessionInfo(username, sessionKey);
 	}
-	
+
 	public boolean isTokenExpired(String token) {
-	    try {
-	        Claims claims = parseToken(token);
-	        return claims.getExpiration().before(new Date());
-	    } catch (io.jsonwebtoken.ExpiredJwtException e) {
-	        return true;
-	    } catch (Exception e) {
-	        return true;  // Treat other parsing errors as expired or invalid
-	    }
+		try {
+			Claims claims = parseToken(token);
+			return claims.getExpiration().before(new Date());
+		} catch (io.jsonwebtoken.ExpiredJwtException e) {
+			return true;
+		} catch (Exception e) {
+			return true; // Treat other parsing errors as expired or invalid
+		}
 	}
-	
-	
+
 	public String getSubject(String token) {
-	    try {
-	        return Jwts.parserBuilder()
-	                   .setSigningKey(secretKey)
-	                   .build()
-	                   .parseClaimsJws(token)
-	                   .getBody()
-	                   .getSubject();
-	    } catch (io.jsonwebtoken.ExpiredJwtException e) {
-	        return e.getClaims().getSubject(); // Extract even if expired
-	    } catch (Exception e) {
-	        return null;  // Invalid or malformed token
-	    }
+		try {
+			return Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token).getBody().getSubject();
+		} catch (io.jsonwebtoken.ExpiredJwtException e) {
+			return e.getClaims().getSubject(); // Extract even if expired
+		} catch (Exception e) {
+			return null;  // Invalid or malformed token
+		}
 	}
 
 }

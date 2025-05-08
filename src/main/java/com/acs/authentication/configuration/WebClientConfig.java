@@ -7,9 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import com.acs.authentication.entity.AppConfiguration;
 import com.acs.authentication.repo.ConfigurationRepository;
-import com.acs.authentication.util.SignatureUtil;
 
 @Configuration
 public class WebClientConfig {
@@ -22,7 +20,6 @@ public class WebClientConfig {
 
 		return WebClient.builder().baseUrl(baseUrl)
 				.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-				// .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
 				.build();
 	}
 }

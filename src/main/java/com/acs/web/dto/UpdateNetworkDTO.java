@@ -10,5 +10,4 @@ public class UpdateNetworkDTO {
 	private String sourcenatipaddress;
 	private String dns2;
 	private String networkofferingid;
-	private String userId;
 }

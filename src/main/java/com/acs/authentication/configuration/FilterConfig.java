@@ -14,7 +14,7 @@ public class FilterConfig {
 		FilterRegistrationBean<JwtSessionFilter> registrationBean = new FilterRegistrationBean<>();
 
 		registrationBean.setFilter(new JwtSessionFilter());
-		registrationBean.addUrlPatterns("/api/cloudstack*");
+		registrationBean.addUrlPatterns("/api/cloudstack/*");
 		registrationBean.setOrder(1);
 
 		return registrationBean;

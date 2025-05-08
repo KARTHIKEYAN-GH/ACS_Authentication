@@ -13,7 +13,6 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClient.RequestBodySpec;
 
 import com.acs.authentication.entity.User;
 import com.acs.authentication.service.ApiKeyAuthService;
@@ -21,7 +20,6 @@ import com.acs.authentication.service.UserService;
 import com.acs.authentication.util.JwtUtil;
 import com.acs.authentication.util.SessionInfo;
 import com.acs.web.dto.SessionDetails;
-import com.acs.web.dto.TokenResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,7 +45,7 @@ public class GenericRequestHandler {
 
 	@Autowired
 	private RedisTemplate<String, Object> redisTemplate;
-	
+
 	@Autowired
 	private ApiKeyAuthService apiKeyAuthService;
 
@@ -79,16 +77,13 @@ public class GenericRequestHandler {
 			sessionId = session.getSessionKey();
 		}
 
-		return callAcsApi(method, command, queryParams, body, sessionId)
-			.map(ResponseEntity::ok)
-			.onErrorResume(e -> {
-				e.printStackTrace();
-				return Mono.just(serverError("Internal Server Error: " + e.getMessage()));
-			});
+		return callAcsApi(method, command, queryParams, body, sessionId).map(ResponseEntity::ok).onErrorResume(e -> {
+			e.printStackTrace();
+			return Mono.just(serverError("Internal Server Error: " + e.getMessage()));
+		});
 	}
 
-
-	public Mono<JsonNode> callAcsApi(HttpMethod method, String command, Map<String, String> queryParams,Object body,
+	public Mono<JsonNode> callAcsApi(HttpMethod method, String command, Map<String, String> queryParams, Object body,
 			String sessionId) {
 
 		StringBuilder urlBuilder = new StringBuilder("/?command=" + command + "&response=json");
@@ -107,7 +102,7 @@ public class GenericRequestHandler {
 			}
 
 		}
-		
+
 		// Build final URL
 		queryParams.forEach((key, value) -> {
 			if (!"userId".equalsIgnoreCase(key)) { // skip userId
@@ -138,13 +133,17 @@ public class GenericRequestHandler {
 
 		// In case of logout, remove session from Redis
 		if ("logout".equalsIgnoreCase(command)) {
-			redisTemplate.opsForValue().getOperations().delete("session:" + sessionId); // Delete session data from Redis
-			System.out.println("session sucesssfully deleted from redis after logout :"+sessionId);
-																						 
+			redisTemplate.opsForValue().getOperations().delete("session:" + sessionId); // Delete session data from
+																						// Redis
+			System.out.println("session sucesssfully deleted from redis after logout :" + sessionId);
+
 		}
 
 		return requestSpec.exchangeToMono(response -> handleResponse(response, command, sessionId, queryParams)); // Execute
-																													// API call																											// call
+																													// API
+																													// call
+																													// //
+																													// call
 	}
 
 	private Mono<JsonNode> handleResponse(ClientResponse response, String command, String sessionId,
@@ -172,16 +171,16 @@ public class GenericRequestHandler {
 					String usersId = loginResponse.get("userid").asText();
 
 					redisTemplate.opsForValue().set("session:" + sessionKey, sessionDetails); // added to cache
-					redisTemplate.expire("session:" + sessionKey, 1800, TimeUnit.SECONDS); // 30min  Half an hour
-				
+					redisTemplate.expire("session:" + sessionKey, 1800, TimeUnit.SECONDS); // 30min Half an hour
+
 					System.out.println("Captured sessionkey & JSESSIONID for user: " + usersId);
-					
-					String username=loginResponse.get("username").asText();
+
+					String username = loginResponse.get("username").asText();
 					String jwtToken = jwtUtil.generateToken(username, sessionKey);
 					String jwtrefreshToken = jwtUtil.generateRefreshToken(username);
-					
-					//ObjectNode responseWithToken = (ObjectNode) loginResponse;
-					//responseWithToken.put("token", jwtToken);
+
+					// ObjectNode responseWithToken = (ObjectNode) loginResponse;
+					// responseWithToken.put("token", jwtToken);
 
 					User existingUser = userService.findByUserId(loginResponse.get("userid").asText());
 					if (existingUser == null) {
@@ -206,10 +205,10 @@ public class GenericRequestHandler {
 						}
 						userService.save(user);
 					}
-  					ObjectNode tokenOnlyResponse = JsonNodeFactory.instance.objectNode();
-			        tokenOnlyResponse.put("accessToken", jwtToken);
-			        tokenOnlyResponse.put("refreshToken", jwtrefreshToken);
-			        return tokenOnlyResponse;
+					ObjectNode tokenOnlyResponse = JsonNodeFactory.instance.objectNode();
+					tokenOnlyResponse.put("accessToken", jwtToken);
+					tokenOnlyResponse.put("refreshToken", jwtrefreshToken);
+					return tokenOnlyResponse;
 				}
 			} else if ("getUserKeys".equalsIgnoreCase(command)) {
 				JsonNode getuserkeysresponse = body.get("getuserkeysresponse");
