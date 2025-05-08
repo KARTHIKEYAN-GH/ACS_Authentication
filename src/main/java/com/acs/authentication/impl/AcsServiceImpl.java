@@ -31,25 +31,24 @@ import reactor.core.publisher.Mono;
 
 @Service
 public class AcsServiceImpl implements AcsService {
-	
+
 	@Autowired
 	private PasswordCryptoUtil PasswordCryptoUtil;
-	
+
 	@Autowired
 	private GenericRequestHandler requestHandler;
-	
+
 	@Autowired
 	private JwtUtil jwtUtil;
-	
+
 	@Autowired
 	private ObjectMapper objectMapper;
 
-	
-	@Autowired 
+	@Autowired
 	private UserService userService;
 
 	public Mono<ResponseEntity<JsonNode>> login(LoginRequest loginRequest) {
-		String decryptedPassword=null;
+		String decryptedPassword = null;
 		try {
 			decryptedPassword = PasswordCryptoUtil.decrypt(loginRequest.getPassword());
 		} catch (Exception e) {
@@ -175,28 +174,37 @@ public class AcsServiceImpl implements AcsService {
 
 	@Override
 	public Mono<ResponseEntity<JsonNode>> makeRefreshTokenCall(Map<String, String> tokens) {
-	
-		boolean accessTokenisExpired = jwtUtil.isTokenExpired(tokens.get("accessToken"));
-		boolean refreshTokenisExpired = jwtUtil.isTokenExpired(tokens.get("refreshToken"));
-		
-		if(accessTokenisExpired && !refreshTokenisExpired)
-		{
-			Claims refreshToken=jwtUtil.parseToken(tokens.get("refreshToken"));
-			String username=refreshToken.getSubject();
-			
-			User user=userService.findByUserName(username);
-			Map<String, String> queryParams = new HashMap<>();
-			queryParams.put("username", user.getUserName());
-			queryParams.put("password", user.getPassword());
 
-			if (!user.getUserName().equalsIgnoreCase("admin")) {
-				queryParams.put("domain", user.getUserName());
-				}	
-			return requestHandler.handleRequest(HttpMethod.POST, "login", queryParams, null, null);
-		}
+		String refreshToken = tokens.get("refreshToken");
+		String accessToken = tokens.get("accessToken");
+
+		boolean accessTokenisExpired = jwtUtil.isTokenExpired(refreshToken);
+		boolean refreshTokenisExpired = jwtUtil.isTokenExpired(accessToken);
+
+		String usernameofresfreshToken = jwtUtil.getSubject(refreshToken);
+		String usernameofaccessToken = jwtUtil.getSubject(accessToken);
+
+		Map<String, String> queryParams = new HashMap<>();
 		ObjectNode responseNode = objectMapper.createObjectNode();
-		responseNode.put("message", "invalidTokens");
-		return Mono.just(ResponseEntity.badRequest().body(responseNode));		
+
+		if (usernameofresfreshToken.equals(usernameofaccessToken)) {
+
+			if (accessTokenisExpired && !refreshTokenisExpired) {
+
+				User user = userService.findByUserName(usernameofresfreshToken);
+				queryParams.put("username", user.getUserName());
+				queryParams.put("password", user.getPassword());
+
+				if (!user.getUserName().equalsIgnoreCase("admin")) {
+					queryParams.put("domain", user.getUserName());
+				}
+				return requestHandler.handleRequest(HttpMethod.POST, "login", queryParams, null, null);
+			}
+			responseNode.put("message", "Tokens Expired");
+			return Mono.just(ResponseEntity.badRequest().body(responseNode));
+		}
+		responseNode.put("message", "InvalidTokens");
+		return Mono.just(ResponseEntity.badRequest().body(responseNode));
 	}
-	
+
 }
