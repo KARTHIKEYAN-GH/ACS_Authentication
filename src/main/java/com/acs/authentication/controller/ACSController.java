@@ -2,8 +2,10 @@ package com.acs.authentication.controller;
 
 import java.util.Map;
 
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,8 +23,8 @@ import com.acs.web.dto.UpdateNetworkDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import reactor.core.publisher.Mono;
-
 @RestController
+@CrossOrigin(origins = "http://localhost:4200", allowedHeaders = "Authorization")
 @RequestMapping("/api/cloudstack")
 public class ACSController {
 
@@ -39,7 +41,7 @@ public class ACSController {
 		return acsService.login(loginRequest);
 	}
 
-	@GetMapping("/refresh")
+	@PostMapping("/refresh")
 	public Mono<ResponseEntity<JsonNode>> makeRefreshtokenCall(@RequestParam Map<String, String> tokens) {
 		return acsService.makeRefreshTokenCall(tokens);
 
@@ -50,7 +52,7 @@ public class ACSController {
 		return acsService.logout();
 	}
 
-	@GetMapping("/getUserKeys")
+	@PostMapping("/getUserKeys")
 	public Mono<ResponseEntity<JsonNode>> getUserKeys(@RequestBody GetUserKeysDTO getUserKeysDTO) {
 		return acsService.getUserKeys(getUserKeysDTO);
 	}

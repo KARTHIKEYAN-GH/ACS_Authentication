@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.ComponentScan;
 
-@ComponentScan("com.acs")
+@ComponentScan
 @SpringBootApplication
 @EnableCaching
 public class AuthenticationApplication {

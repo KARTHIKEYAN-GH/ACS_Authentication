@@ -34,8 +34,20 @@ public class JwtSessionFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
-
 		String authHeader = request.getHeader("Authorization");
+		
+		 // CORS headers manually added
+	    response.setHeader("Access-Control-Allow-Origin", "http://localhost:4200");
+	    response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+	    response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+	    response.setHeader("Access-Control-Allow-Credentials", "true");
+
+	    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+	        response.setStatus(HttpServletResponse.SC_OK);
+	        return;
+	    }
+
+		
 
 		if (authHeader == null || !authHeader.startsWith("Bearer ")) {
 			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

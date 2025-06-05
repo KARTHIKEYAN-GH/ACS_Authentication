@@ -9,14 +9,21 @@ import com.acs.authentication.util.JwtSessionFilter;
 @Configuration
 public class FilterConfig {
 
-	@Bean
-	public FilterRegistrationBean<JwtSessionFilter> jwtFilter() {
-		FilterRegistrationBean<JwtSessionFilter> registrationBean = new FilterRegistrationBean<>();
+    private final JwtSessionFilter jwtSessionFilter;
 
-		registrationBean.setFilter(new JwtSessionFilter());
-		registrationBean.addUrlPatterns("/api/cloudstack/*");
-		registrationBean.setOrder(1);
+    public FilterConfig(JwtSessionFilter jwtSessionFilter) {
+        this.jwtSessionFilter = jwtSessionFilter;
+    }
 
-		return registrationBean;
-	}
+    @Bean
+    public FilterRegistrationBean<JwtSessionFilter> jwtFilter() {
+        FilterRegistrationBean<JwtSessionFilter> registrationBean = new FilterRegistrationBean<>();
+        
+        registrationBean.setFilter(jwtSessionFilter);  // use injected bean, NOT new instance
+        registrationBean.addUrlPatterns("/api/cloudstack/*");
+        registrationBean.setOrder(1);
+        
+        return registrationBean;
+    }
 }
+

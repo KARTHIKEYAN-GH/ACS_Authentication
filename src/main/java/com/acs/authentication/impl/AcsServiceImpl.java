@@ -74,8 +74,11 @@ public class AcsServiceImpl implements AcsService {
 	@Override
 	public Mono<ResponseEntity<JsonNode>> listNetworks(Map<String, String> param) {
 		Map<String, String> queryParams = new HashMap<>();
-		queryParams.put("domainId", param.get("domainId"));
+		queryParams.put("account", param.get("account"));
 		queryParams.put("id", param.get("id"));
+		queryParams.put("page",param.get("page"));
+		queryParams.put("pagesize", param.get("pagesize"));
+		queryParams.put("listall", param.get("listall"));
 		return requestHandler.handleRequest(HttpMethod.GET, "listNetworks", queryParams, null, null);
 	}
 

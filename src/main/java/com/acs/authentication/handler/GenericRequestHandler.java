@@ -20,6 +20,7 @@ import com.acs.authentication.service.UserService;
 import com.acs.authentication.util.JwtUtil;
 import com.acs.authentication.util.SessionInfo;
 import com.acs.web.dto.SessionDetails;
+import com.acs.web.dto.TokenResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,7 +57,11 @@ public class GenericRequestHandler {
 		}
 		return null;
 	}
-
+//	public <T> Mono<ResponseEntity<TokenResponse>> login()
+//	{
+//		String 
+//	}
+	
 	public <T> Mono<ResponseEntity<String>> handle(T requestDto, HttpMethod method) {
 		Map<String, String> queryParams = objectMapper.convertValue(requestDto, new TypeReference<>() {
 		});
@@ -128,7 +133,7 @@ public class GenericRequestHandler {
 			System.out.println("----- Sending Cookies in Request Header -----");
 			System.out.println("sessionkey = " + (sessionDetails != null ? sessionDetails.getSessionkey() : "null"));
 			System.out.println("JSESSIONID = " + (sessionDetails != null ? sessionDetails.getJsessionid() : "null"));
-			System.out.println("---------------------------------------------");
+			System.out.println("-------------------------------------------");
 		}
 
 		// In case of logout, remove session from Redis
@@ -178,9 +183,6 @@ public class GenericRequestHandler {
 					String username = loginResponse.get("username").asText();
 					String jwtToken = jwtUtil.generateToken(username, sessionKey);
 					String jwtrefreshToken = jwtUtil.generateRefreshToken(username);
-
-					// ObjectNode responseWithToken = (ObjectNode) loginResponse;
-					// responseWithToken.put("token", jwtToken);
 
 					User existingUser = userService.findByUserId(loginResponse.get("userid").asText());
 					if (existingUser == null) {
