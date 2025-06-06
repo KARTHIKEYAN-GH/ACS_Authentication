@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -202,9 +203,9 @@ public class AcsServiceImpl implements AcsService {
 				}
 				return requestHandler.handleRequest(HttpMethod.POST, "login", queryParams, null, null);
 			}
-			responseNode.put("message", "Invalid or Token Expired");
-			return Mono.just(ResponseEntity.badRequest().body(responseNode));
-		}
+			responseNode.put("message", "Token Expired Please login");
+			return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseNode));	
+			}
 		responseNode.put("message", "InvalidTokens");
 		return Mono.just(ResponseEntity.badRequest().body(responseNode));
 	}

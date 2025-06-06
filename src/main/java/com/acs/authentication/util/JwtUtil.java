@@ -21,9 +21,9 @@ public class JwtUtil {
 
 	private SecretKey secretKey;
 
-	private static final long ACCESSTOKEN_EXPIRATION_TIME = 60 * 1000; // 10 mins
+	private static final long ACCESSTOKEN_EXPIRATION_TIME = 10 * 1000; // 10 mins
 
-	private static final long REFRESHTOKEN_EXPIRATION_TIME = 1200 * 1000; // 20 mins
+	private static final long REFRESHTOKEN_EXPIRATION_TIME = 20 * 1000; // 20 mins
 
 	@PostConstruct
 	public void init() {

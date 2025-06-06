@@ -42,7 +42,7 @@ public class ACSController {
 	}
 
 	@PostMapping("/refresh")
-	public Mono<ResponseEntity<JsonNode>> makeRefreshtokenCall(@RequestParam Map<String, String> tokens) {
+	public Mono<ResponseEntity<JsonNode>> makeRefreshtokenCall(@RequestBody Map<String, String> tokens) {
 		return acsService.makeRefreshTokenCall(tokens);
 
 	}
