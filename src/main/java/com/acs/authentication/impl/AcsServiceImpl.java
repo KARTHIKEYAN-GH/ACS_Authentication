@@ -45,22 +45,45 @@ public class AcsServiceImpl implements AcsService {
 	@Autowired
 	private UserService userService;
 
-	public Mono login(LoginRequest loginRequest) {
-		String decryptedPassword = null;
-		try {
-			decryptedPassword = PasswordCryptoUtil.decrypt(loginRequest.getPassword());
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		Map<String, String> queryParams = new HashMap<>();
-		queryParams.put("username", loginRequest.getUsername());
-		queryParams.put("password", decryptedPassword);
+	public Mono<ResponseEntity<JsonNode>> login(LoginRequest loginRequest) {
+	    String decryptedPassword = null;
+	    try {
+	        decryptedPassword = PasswordCryptoUtil.decrypt(loginRequest.getPassword());
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
+	    }
 
-		if (!loginRequest.getUsername().equalsIgnoreCase("admin")) {
+	    Map<String, String> queryParams = new HashMap<>();
+	    queryParams.put("username", loginRequest.getUsername());
+	    queryParams.put("password", decryptedPassword);
 
-			queryParams.put("domain", loginRequest.getUsername());
-		}
-		return requestHandler.handleRequest(HttpMethod.POST, "login", queryParams, null, null);
+	    if (!loginRequest.getUsername().equalsIgnoreCase("admin")) {
+	        queryParams.put("domain", loginRequest.getUsername());
+	    }
+
+	    return requestHandler.handleRequest(HttpMethod.POST, "login", queryParams, null, null)
+	        .flatMap(response -> {
+	            JsonNode body = response.getBody();
+	            JsonNode loginResponse = body.path("loginresponse");
+
+	            if (loginResponse.has("errorcode")) {
+	                int errorCode = loginResponse.path("errorcode").asInt();
+	                String errorText = loginResponse.path("errortext").asText();
+
+	                // 🔴 ACS returned failure — convert to HTTP 401
+	                ObjectMapper mapper = new ObjectMapper();
+	                ObjectNode errorBody = mapper.createObjectNode();
+	                errorBody.put("error", true);
+	                errorBody.put("message", errorText);
+	                errorBody.put("code", errorCode);
+
+	                return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorBody));
+	            }
+
+	            // ✅ ACS login success, return original response
+	            return Mono.just(ResponseEntity.ok(body));
+	        });
 	}
 
 	@Override

@@ -1,7 +1,7 @@
 package com.acs.authentication.controller;
 
 import java.util.Map;
-
+import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -51,7 +51,7 @@ public class ACSController {
 	public Mono<ResponseEntity<JsonNode>> logout() {
 		return acsService.logout();
 	}
-
+	
 	@PostMapping("/getUserKeys")
 	public Mono<ResponseEntity<JsonNode>> getUserKeys(@RequestBody GetUserKeysDTO getUserKeysDTO) {
 		return acsService.getUserKeys(getUserKeysDTO);
@@ -96,5 +96,12 @@ public class ACSController {
 	public Mono<ResponseEntity<JsonNode>> deleteNetwork(@RequestParam Map<String, String> param) {
 		return acsService.queryAsyncJobResult(param);
 	}
-
+	
+	@GetMapping("/random")
+	public int generateRandomnumbers() {
+	Random random = new Random();
+    // Generate a random number between 1000 and 9999
+    int fourDigit = 1000 + random.nextInt(9000); 
+	return fourDigit;
+}
 }
