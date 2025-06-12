@@ -19,11 +19,14 @@ import com.acs.web.dto.CreateVolumeDTO;
 import com.acs.web.dto.DeleteNetworkDTO;
 import com.acs.web.dto.GetUserKeysDTO;
 import com.acs.web.dto.LoginRequest;
+import com.acs.web.dto.TokenResponse;
 import com.acs.web.dto.UpdateNetworkDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import reactor.core.publisher.Mono;
 @RestController
+@SecurityRequirement(name = "bearerAuth")
 @CrossOrigin(origins = "http://localhost:4200", allowedHeaders = "Authorization")
 @RequestMapping("/api/cloudstack")
 public class ACSController {
@@ -42,7 +45,7 @@ public class ACSController {
 	}
 
 	@PostMapping("/refresh")
-	public Mono<ResponseEntity<JsonNode>> makeRefreshtokenCall(@RequestBody Map<String, String> tokens) {
+	public Mono<ResponseEntity<?>> makeRefreshtokenCall(@RequestBody Map<String, String> tokens) {
 		return acsService.makeRefreshTokenCall(tokens);
 
 	}

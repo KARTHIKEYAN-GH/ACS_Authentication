@@ -9,6 +9,7 @@ import com.acs.web.dto.CreateVolumeDTO;
 import com.acs.web.dto.DeleteNetworkDTO;
 import com.acs.web.dto.GetUserKeysDTO;
 import com.acs.web.dto.LoginRequest;
+import com.acs.web.dto.TokenResponse;
 import com.acs.web.dto.UpdateNetworkDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -38,6 +39,6 @@ public interface AcsService {
 
 	Mono<ResponseEntity<JsonNode>> updateNetwork(UpdateNetworkDTO updateNetworkDTO);
 
-	Mono<ResponseEntity<JsonNode>> makeRefreshTokenCall(Map<String, String> tokens);
+	Mono<ResponseEntity<?>> makeRefreshTokenCall(Map<String, String> tokens);
 
 }

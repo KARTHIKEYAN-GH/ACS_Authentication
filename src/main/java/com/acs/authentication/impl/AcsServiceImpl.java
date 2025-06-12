@@ -15,11 +15,13 @@ import com.acs.authentication.service.AcsService;
 import com.acs.authentication.service.UserService;
 import com.acs.authentication.util.JwtUtil;
 import com.acs.authentication.util.PasswordCryptoUtil;
+import com.acs.authentication.util.SessionInfo;
 import com.acs.web.dto.CreateNetworkDTO;
 import com.acs.web.dto.CreateVolumeDTO;
 import com.acs.web.dto.DeleteNetworkDTO;
 import com.acs.web.dto.GetUserKeysDTO;
 import com.acs.web.dto.LoginRequest;
+import com.acs.web.dto.TokenResponse;
 import com.acs.web.dto.UpdateNetworkDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -199,7 +201,7 @@ public class AcsServiceImpl implements AcsService {
 	}
 
 	@Override
-	public Mono<ResponseEntity<JsonNode>> makeRefreshTokenCall(Map<String, String> tokens) {
+	public Mono<ResponseEntity<?>> makeRefreshTokenCall(Map<String, String> tokens) {
 
 		String refreshToken = tokens.get("refreshToken");
 		String accessToken = tokens.get("accessToken");
@@ -210,27 +212,25 @@ public class AcsServiceImpl implements AcsService {
 		String usernameofresfreshToken = jwtUtil.getSubject(refreshToken);
 		String usernameofaccessToken = jwtUtil.getSubject(accessToken);
 
-		Map<String, String> queryParams = new HashMap<>();
 		ObjectNode responseNode = objectMapper.createObjectNode();
 
 		if (usernameofresfreshToken.equals(usernameofaccessToken)) {
 
 			if (accessTokenisExpired && !refreshTokenisExpired) {
-
-				User user = userService.findByUserName(usernameofresfreshToken);
-				queryParams.put("username", user.getUserName());
-				queryParams.put("password", user.getPassword());
-
-				if (!user.getUserName().equalsIgnoreCase("admin")) {
-					queryParams.put("domain", user.getUserName());
-				}
-				return requestHandler.handleRequest(HttpMethod.POST, "login", queryParams, null, null);
+				String sessionKey =jwtUtil.getSessionKey(accessToken);
+				 String newAccessToken=jwtUtil.generateToken(usernameofresfreshToken, sessionKey);
+				 String newRefreshToken=jwtUtil.generateRefreshToken(usernameofaccessToken);
+				 TokenResponse response = new TokenResponse();
+				 response.setAccessToken(newAccessToken);
+				 response.setRefreshToken(newRefreshToken); 
+				 return Mono.just(ResponseEntity.status(HttpStatus.CREATED).body(response));
 			}
 			responseNode.put("message", "Token Expired Please login");
-			return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseNode));	
+	        return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseNode));
 			}
 		responseNode.put("message", "InvalidTokens");
 		return Mono.just(ResponseEntity.badRequest().body(responseNode));
 	}
 
 }
+

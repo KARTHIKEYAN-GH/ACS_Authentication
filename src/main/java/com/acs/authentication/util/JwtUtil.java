@@ -21,9 +21,9 @@ public class JwtUtil {
 
 	private SecretKey secretKey;
 
-	private static final long ACCESSTOKEN_EXPIRATION_TIME = 50 * 1000; // 10 mins
+	private static final long ACCESSTOKEN_EXPIRATION_TIME = 360 * 1000; // 
 
-	private static final long REFRESHTOKEN_EXPIRATION_TIME = 90 * 1000; // 20 mins
+	private static final long REFRESHTOKEN_EXPIRATION_TIME = 1200 * 1000; // 
 
 	@PostConstruct
 	public void init() {
@@ -56,7 +56,8 @@ public class JwtUtil {
 
 		return new SessionInfo(username, sessionKey);
 	}
-
+	
+	
 	public boolean isTokenExpired(String token) {
 		try {
 			Claims claims = parseToken(token);
@@ -76,6 +77,21 @@ public class JwtUtil {
 		} catch (Exception e) {
 			return null;  // Invalid or malformed token
 		}
+	}
+	public String getSessionKey(String token) {
+	    try {
+	        return Jwts.parserBuilder()
+	                .setSigningKey(secretKey)
+	                .build()
+	                .parseClaimsJws(token)
+	                .getBody()
+	                .get("sessionKey", String.class);
+	    } catch (io.jsonwebtoken.ExpiredJwtException e) {
+	        // Extract even if expired
+	        return e.getClaims().get("sessionKey", String.class);
+	    } catch (Exception e) {
+	        return null;  // Invalid or malformed token
+	    }
 	}
 
 }

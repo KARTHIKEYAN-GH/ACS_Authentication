@@ -176,7 +176,7 @@ public class GenericRequestHandler {
 					String usersId = loginResponse.get("userid").asText();
 
 					redisTemplate.opsForValue().set("session:" + sessionKey, sessionDetails); // added to cache
-					redisTemplate.expire("session:" + sessionKey, 1800, TimeUnit.SECONDS); // 30min Half an hour
+					redisTemplate.expire("session:" + sessionKey, 20, TimeUnit.MINUTES); // 20min Half an hour
 
 					System.out.println("Captured sessionkey & JSESSIONID for user: " + usersId);
 
