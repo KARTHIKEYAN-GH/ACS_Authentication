@@ -29,7 +29,7 @@ public class JwtSessionFilter extends OncePerRequestFilter {
 		// return true;
 		// }
 
-		if (path.equals("/api/cloudstack/login") || path.equals("/api/cloudstack/refresh")) {
+		if (path.equals("/api/cloudstack/login") || path.equals("/api/cloudstack/refresh") || path.equals("/api/cloudstack/keepalive")) {
 			return true;
 		}
 		return false;
@@ -38,13 +38,15 @@ public class JwtSessionFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
+		String path = request.getRequestURI();
+
 		String authHeader = request.getHeader("Authorization");
 		
 		 // CORS headers manually added
-	    response.setHeader("Access-Control-Allow-Origin", "http://localhost:4200");
-	    response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-	    response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
-	    response.setHeader("Access-Control-Allow-Credentials", "true");
+	   response.setHeader("Access-Control-Allow-Origin", "http://localhost:4200");
+	   response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+	   response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+	   response.setHeader("Access-Control-Allow-Credentials", "true");
 
 	    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
 	        response.setStatus(HttpServletResponse.SC_OK);
@@ -63,36 +65,35 @@ public class JwtSessionFilter extends OncePerRequestFilter {
 		    String redisKey = "session:" + sessionKey;
 		    Object sessionData = redisTemplate.opsForValue().get(redisKey);
 
-		    Long oldTtl = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
-	        System.out.println("Old TTL: " + oldTtl);
+		    //Long oldTtl = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
+		    
 		    // Check if session exists in Redis
 		    if (Boolean.TRUE.equals(redisTemplate.hasKey(redisKey))) {
-		        redisTemplate.expire(redisKey, 15, TimeUnit.MINUTES);
-		        System.out.println("Session TTL renewed to 15 minutes for: " + sessionKey);
-		        System.out.println("=====================================================");	      
-		        Long newTtl = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
-		        System.out.println("New TTL: " + newTtl);      
+		    	
+		    	Long oldTtl = redisTemplate.getExpire(redisKey);
+		        System.out.println("Old TTL: " + oldTtl);
+		    	if(!path.equalsIgnoreCase("/api/cloudstack/logout") && oldTtl<=2)
+		    	{
+		    		redisTemplate.expire(redisKey, 4, TimeUnit.MINUTES);
+			        System.out.println("Session TTL renewed to 4 minutes for: " + sessionKey);
+			        System.out.println("=====================================================");	      
+			        Long newTtl = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
+			        System.out.println("New TTL: " + newTtl); 
+		    	}
+		    	 System.out.println("TTL is not renewed for logout");
+		             
 		    } else {
 		        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 		        response.getWriter().write("Session expired or invalid.");
 		        return;
 		    }		    
-		    if (sessionData != null) {
-		        redisTemplate.expire(redisKey, 15, TimeUnit.MINUTES);
-		        System.out.println("Session TTL renewed for 15 minutes for sessionKey: " + sessionKey);
-		    } else {
-		        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-		        response.getWriter().write("Session expired or invalid.");
-		        return;
-		    }
 
-		    request.setAttribute("session", sessioninfo); // Optional: pass to controller
+		    request.setAttribute("session", sessioninfo); 
 		} catch (Exception e) {
 		    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 		    response.getWriter().write("Invalid or expired token.");
 		    return;
 		}
-
 		filterChain.doFilter(request, response);
 	}
 }

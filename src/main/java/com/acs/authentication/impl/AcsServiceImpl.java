@@ -2,13 +2,15 @@ package com.acs.authentication.impl;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-
+import java.util.Date;
 import com.acs.authentication.entity.User;
 import com.acs.authentication.handler.GenericRequestHandler;
 import com.acs.authentication.service.AcsService;
@@ -46,6 +48,9 @@ public class AcsServiceImpl implements AcsService {
 
 	@Autowired
 	private UserService userService;
+	
+	@Autowired
+	private RedisTemplate<String, Object> redisTemplate;	
 
 	public Mono<ResponseEntity<JsonNode>> login(LoginRequest loginRequest) {
 	    String decryptedPassword = null;
@@ -73,7 +78,6 @@ public class AcsServiceImpl implements AcsService {
 	                int errorCode = loginResponse.path("errorcode").asInt();
 	                String errorText = loginResponse.path("errortext").asText();
 
-	                // 🔴 ACS returned failure — convert to HTTP 401
 	                ObjectMapper mapper = new ObjectMapper();
 	                ObjectNode errorBody = mapper.createObjectNode();
 	                errorBody.put("error", true);
@@ -232,5 +236,94 @@ public class AcsServiceImpl implements AcsService {
 		return Mono.just(ResponseEntity.badRequest().body(responseNode));
 	}
 
+		@Override
+		public ResponseEntity<?> keepAlive(TokenResponse tokens) {
+		    System.out.println("Keep-alive call triggered");
+
+		    String accessToken = tokens.getAccessToken().replace("Bearer ", "");
+		    String refreshToken = tokens.getRefreshToken();
+
+		    String sessionKey = jwtUtil.getSessionKey(accessToken);
+		    String redisKey = "session:" + sessionKey;
+
+		    if (!redisTemplate.hasKey(redisKey)) {
+		        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Session expired");
+		    }
+
+		    // 1. Check Redis TTL
+		    Long ttl = redisTemplate.getExpire(redisKey, TimeUnit.MINUTES);
+		    if (ttl != null && ttl <= 2) {
+		        redisTemplate.expire(redisKey, 4, TimeUnit.MINUTES);
+		        System.out.println("TTL extended to 4 mins");
+		    }
+
+		    // 2. Check refreshToken expiration
+		    Date refreshExp = jwtUtil.extractExpiration(refreshToken); // use refreshToken here
+		    long secondsLeft = (refreshExp.getTime() - System.currentTimeMillis()) / 1000;
+
+		    if (secondsLeft <= 200) { // less than 3.5 minutes
+		        String username = jwtUtil.getSubject(accessToken);
+
+		        String newAccess = jwtUtil.generateToken(username, sessionKey);
+		        String newRefresh = jwtUtil.generateRefreshToken(username);
+
+		        // Extend Redis TTL
+		        redisTemplate.expire(redisKey, 5, TimeUnit.MINUTES);
+
+		        Map<String, String> newTokens = Map.of(
+		            "accessToken", newAccess,
+		            "refreshToken", newRefresh
+		        );
+
+		        return ResponseEntity.ok(Map.of("newTokens", newTokens));
+		    }
+
+		    return ResponseEntity.ok(Map.of("message", "Keepalive successful"));
+	}
+
+//	@Override
+//	public ResponseEntity<?> keepAlive(Map<String, String> tokens) {
+//		System.out.println("keep alive call triggered ");
+//		//String accessToken = tokens.replace("Bearer ", "");
+//		String AccessToken=tokens.get("accessToken");
+//		String accessToken =AccessToken.replace("Bearer ", "");
+//	    String sessionKey = jwtUtil.getSessionKey(accessToken);
+//	    String redisKey = "session:" + sessionKey;
+//
+//	    if (!redisTemplate.hasKey(redisKey)) {
+//	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Session expired");
+//	    }
+//
+//	    // 1. Check TTL
+//	    Long ttl = redisTemplate.getExpire(redisKey, TimeUnit.MINUTES);
+//	    if (ttl != null && ttl <= 2) {
+//	        redisTemplate.expire(redisKey, 4, TimeUnit.MINUTES);
+//	        System.out.println("TTL extended to 4 mins");
+//	    }
+//
+//	    // 2. Check refresh token expiry
+//	    Date refreshExp = jwtUtil.extractExpiration(tokens.getBytes());
+//	    long secondsLeft = (refreshExp.getTime() - System.currentTimeMillis()) / 1000;
+//	    if (secondsLeft <= 200) {  // <= 5 mins
+//	        // Call refresh logic
+//	    	String username=jwtUtil.getSubject(accessToken);
+//	        String newAccess = jwtUtil.generateToken(username, sessionKey); // Include claims as needed
+//	        String newRefresh = jwtUtil.generateRefreshToken(username);
+//	        
+//	        System.out.println("newAccess : "+newAccess);
+//	        System.out.println("newRefresh :"+ newRefresh);
+//	        // Optionally update Redis too
+//	        redisTemplate.expire(redisKey, 5, TimeUnit.MINUTES);
+//
+//	        Map<String, String> newTokens = Map.of(
+//	            "accessToken", newAccess,
+//	            "refreshToken", newRefresh
+//	        );
+//
+//	        return ResponseEntity.ok(Map.of("newTokens", newTokens));
+//	    }
+//
+//	    return ResponseEntity.ok(Map.of("message", "Keepalive successful"));
+//	}		
 }
 

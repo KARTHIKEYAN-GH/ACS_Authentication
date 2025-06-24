@@ -21,10 +21,9 @@ public class JwtUtil {
 
 	private SecretKey secretKey;
 
-	private static final long ACCESSTOKEN_EXPIRATION_TIME = 360 * 1000; // 
+	private static final long ACCESSTOKEN_EXPIRATION_TIME = 120 * 1000; // 2 minutes
 
-	private static final long REFRESHTOKEN_EXPIRATION_TIME = 1200 * 1000; // 
-
+	private static final long REFRESHTOKEN_EXPIRATION_TIME = 360 * 1000; // 6 minutes
 	@PostConstruct
 	public void init() {
 		this.secretKey = Keys.hmacShaKeyFor(secretKeyString.getBytes());
@@ -93,5 +92,15 @@ public class JwtUtil {
 	        return null;  // Invalid or malformed token
 	    }
 	}
+	private Claims extractAllClaims(String token) {
+	    return Jwts.parserBuilder()
+	               .setSigningKey(secretKey)
+	               .build()
+	               .parseClaimsJws(token.replace("Bearer ", ""))
+	               .getBody();
+	}
 
+	public Date extractExpiration(String token) {
+        return extractAllClaims(token).getExpiration();
+    }
 }

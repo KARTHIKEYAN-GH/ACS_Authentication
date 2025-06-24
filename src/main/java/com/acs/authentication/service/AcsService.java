@@ -41,4 +41,6 @@ public interface AcsService {
 
 	Mono<ResponseEntity<?>> makeRefreshTokenCall(Map<String, String> tokens);
 
+	//ResponseEntity<?> keepAlive(Map<String, String> tokens);
+	ResponseEntity<?> keepAlive(TokenResponse tokens);
 }
