@@ -159,6 +159,8 @@ public class GenericRequestHandler {
 
 				if (loginResponse != null && loginResponse.has("sessionkey")) {
 					String sessionKey = loginResponse.get("sessionkey").asText();
+					String username = loginResponse.get("username").asText();
+
 					System.out.println("Captured sessionkey after login: " + sessionKey);
 
 					// extracts the Set-Cookie header from the HTTP response.
@@ -172,6 +174,7 @@ public class GenericRequestHandler {
 					SessionDetails sessionDetails = new SessionDetails(); // Save to Redis
 					sessionDetails.setSessionkey(sessionKey);
 					sessionDetails.setJsessionid(jsessionId);
+					sessionDetails.setUsername(username);
 
 					String usersId = loginResponse.get("userid").asText();
 
@@ -180,7 +183,6 @@ public class GenericRequestHandler {
 
 					System.out.println("Captured sessionkey & JSESSIONID for user: " + usersId);
 
-					String username = loginResponse.get("username").asText();
 					String jwtToken = jwtUtil.generateToken(username, sessionKey);
 					String jwtrefreshToken = jwtUtil.generateRefreshToken(username);
 

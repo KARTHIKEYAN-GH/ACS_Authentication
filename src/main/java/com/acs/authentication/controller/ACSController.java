@@ -43,11 +43,6 @@ public class ACSController {
 	public ResponseEntity<String> test() {
 		return ResponseEntity.ok("Test successful!");
 	}
-//	@GetMapping("/test")
-//	public ResponseEntity<String> test() {
-//		return ResponseEntity.ok("Test successful!");
-//	}
-
 
 	@PostMapping("/login")
 	public Mono<ResponseEntity<JsonNode>> login(@RequestBody LoginRequest loginRequest) {

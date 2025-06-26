@@ -64,24 +64,22 @@ public class JwtSessionFilter extends OncePerRequestFilter {
 		    String sessionKey = sessioninfo.getSessionKey();  // This is your actual Redis key
 		    String redisKey = "session:" + sessionKey;
 		    Object sessionData = redisTemplate.opsForValue().get(redisKey);
-
-		    //Long oldTtl = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
 		    
 		    // Check if session exists in Redis
 		    if (Boolean.TRUE.equals(redisTemplate.hasKey(redisKey))) {
 		    	
-		    	Long oldTtl = redisTemplate.getExpire(redisKey);
+		    	Long oldTtl = redisTemplate.getExpire(redisKey,TimeUnit.MINUTES);
 		        System.out.println("Old TTL: " + oldTtl);
 		    	if(!path.equalsIgnoreCase("/api/cloudstack/logout") && oldTtl<=2)
-		    	{
-		    		redisTemplate.expire(redisKey, 4, TimeUnit.MINUTES);
-			        System.out.println("Session TTL renewed to 4 minutes for: " + sessionKey);
-			        System.out.println("=====================================================");	      
-			        Long newTtl = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
-			        System.out.println("New TTL: " + newTtl); 
-		    	}
-		    	 System.out.println("TTL is not renewed for logout");
-		             
+		    	{	
+		    		System.out.println("Old TTL: " + "below "+ oldTtl + " minutes");
+					redisTemplate.expire(redisKey, 4, TimeUnit.MINUTES);
+					Long newTtl = redisTemplate.getExpire(redisKey,TimeUnit.MINUTES);
+					System.out.println("Session TTL renewed to 4 minutes for: " + sessionKey);
+					System.out.println("New TTL: " + newTtl + " minutes");
+					System.out.println("=====================================================");
+				}
+		    		             
 		    } else {
 		        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 		        response.getWriter().write("Session expired or invalid.");
