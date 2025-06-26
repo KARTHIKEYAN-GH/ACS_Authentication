@@ -1,5 +1,6 @@
 package com.acs.authentication.impl;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -10,14 +11,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import java.util.Date;
-import com.acs.authentication.entity.User;
+
 import com.acs.authentication.handler.GenericRequestHandler;
 import com.acs.authentication.service.AcsService;
 import com.acs.authentication.service.UserService;
 import com.acs.authentication.util.JwtUtil;
 import com.acs.authentication.util.PasswordCryptoUtil;
-import com.acs.authentication.util.SessionInfo;
 import com.acs.web.dto.CreateNetworkDTO;
 import com.acs.web.dto.CreateVolumeDTO;
 import com.acs.web.dto.DeleteNetworkDTO;
@@ -87,7 +86,6 @@ public class AcsServiceImpl implements AcsService {
 	                return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorBody));
 	            }
 
-	            // ✅ ACS login success, return original response
 	            return Mono.just(ResponseEntity.ok(body));
 	        });
 	}
